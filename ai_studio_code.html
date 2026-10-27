@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>수학 공식 인터랙티브 캔버스 (Math Formula Canvas)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Noto+Sans+KR:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+    body {
+      background: #0f172a;
+      color: #f8fafc;
+      font-family: 'Noto Sans KR', sans-serif;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* 상단 컨트롤 툴바 */
+    header {
+      background: rgba(15, 23, 42, 0.95);
+      border-bottom: 1px solid #334155;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+      backdrop-filter: blur(8px);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand h1 {
+      font-size: 1.15rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #38bdf8, #a855f7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .brand span {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      border-left: 1px solid #334155;
+      padding-left: 10px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .btn-group {
+      display: flex;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    button.tool-btn {
+      background: transparent;
+      color: #cbd5e1;
+      border: none;
+      padding: 6px 14px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    button.tool-btn:hover {
+      background: #334155;
+      color: #fff;
+    }
+    button.tool-btn.active {
+      background: #3b82f6;
+      color: #fff;
+    }
+
+    /* 캔버스 뷰포트 */
+    #canvas-container {
+      flex: 1;
+      position: relative;
+      cursor: grab;
+      overflow: hidden;
+    }
+    #canvas-container:active {
+      cursor: grabbing;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* 하단 가이드 힌트 */
+    .hint-bar {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      color: #94a3b8;
+      pointer-events: none;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <h1>★ MATH FORMULA CANVAS</h1>
+      <span>기초 도형부터 고급 해석학까지</span>
+    </div>
+
+    <div class="controls">
+      <!-- 카테고리 필터 -->
+      <div class="btn-group">
+        <button class="tool-btn active" onclick="filterCategory('ALL')">전체 보기</button>
+        <button class="tool-btn" onclick="filterCategory('2D')">1. 평면도형</button>
+        <button class="tool-btn" onclick="filterCategory('3D')">2. 입체도형</button>
+        <button class="tool-btn" onclick="filterCategory('ALG')">3. 대수&방정식</button>
+        <button class="tool-btn" onclick="filterCategory('GEO')">4. 삼각&좌표기하</button>
+        <button class="tool-btn" onclick="filterCategory('ADV')">5. 고급 해석학</button>
+      </div>
+
+      <!-- 테마 변경 -->
+      <div class="btn-group">
+        <button class="tool-btn active" id="th-blackboard" onclick="setTheme('blackboard')">칠판 모드</button>
+        <button class="tool-btn" id="th-notebook" onclick="setTheme('notebook')">공책 모드</button>
+        <button class="tool-btn" id="th-blueprint" onclick="setTheme('blueprint')">청사진 모드</button>
+      </div>
+
+      <button class="tool-btn" style="background:#334155; border-radius:6px;" onclick="resetCamera()">화면 리셋 (0, 0)</button>
+    </div>
+  </header>
+
+  <div id="canvas-container">
+    <canvas id="mathCanvas"></canvas>
+    <div class="hint-bar">
+      💡 <b>마우스 드래그</b>: 캔버스 이동 | <b>휠 스크롤</b>: 확대/축소 | <b>카드 클릭</b>: 해당 공식 확대 포커스
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('mathCanvas');
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('canvas-container');
+
+    let dpr = window.devicePixelRatio || 1;
+    let time = 0;
+
+    // 카메라 (위치 및 줌 레벨)
+    let cam = { x: 50, y: 50, zoom: 0.95 };
+    let isDragging = false;
+    let dragStart = { x: 0, y: 0 };
+    let activeFilter = 'ALL';
+    let currentTheme = 'blackboard';
+
+    // 테마 설정
+    const themes = {
+      blackboard: {
+        bg: '#1c3127',
+        gridLine: '#264235',
+        cardBg: 'rgba(21, 41, 33, 0.85)',
+        cardBorder: '#34d399',
+        title: '#fde047',
+        text: '#f1f5f9',
+        accent: '#67e8f9',
+        tagBg: '#064e3b',
+        fontFamily: "'Caveat', cursive, sans-serif"
+      },
+      notebook: {
+        bg: '#f8fafc',
+        gridLine: '#cbd5e1',
+        cardBg: 'rgba(255, 255, 255, 0.92)',
+        cardBorder: '#f87171',
+        title: '#991b1b',
+        text: '#1e293b',
+        accent: '#2563eb',
+        tagBg: '#fee2e2',
+        fontFamily: "'Caveat', 'Segoe Print', cursive"
+      },
+      blueprint: {
+        bg: '#0a192f',
+        gridLine: '#172a45',
+        cardBg: 'rgba(10, 25, 47, 0.9)',
+        cardBorder: '#38bdf8',
+        title: '#38bdf8',
+        text: '#e2e8f0',
+        accent: '#c084fc',
+        tagBg: '#1e293b',
+        fontFamily: "'Noto Sans KR', sans-serif"
+      }
+    };
+
+    function setTheme(th) {
+      currentTheme = th;
+      document.querySelectorAll('[id^="th-"]').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('th-' + th).classList.add('active');
+    }
+
+    function filterCategory(cat) {
+      activeFilter = cat;
+      document.querySelectorAll('.controls .btn-group:first-child button').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+
+      if (cat !== 'ALL') {
+        const target = formulaData.find(d => d.cat === cat);
+        if (target) {
+          smoothFocus(target.x - 100, target.y - 100, 1.0);
+        }
+      }
+    }
+
+    function resetCamera() {
+      smoothFocus(40, 40, 0.9);
+    }
+
+    // ====================================================
+    // 공식 데이터 세트 (이미지 내용 100% 포함 + 확장)
+    // ====================================================
+    const formulaData = [
+      // 1. 평면도형 (2D Geometry)
+      { id: 1, cat: '2D', title: '1. SQUARE (정사각형)', x: 60, y: 60, w: 260, h: 170,
+        formulas: ['Perimeter = 4a', 'Area = a²'],
+        draw: (ctx, x, y, t) => {
+          ctx.strokeRect(x, y, 55, 55);
+          ctx.fillText('a', x + 62, y + 32);
+          ctx.fillText('a', x + 24, y + 70);
+        }
+      },
+      { id: 2, cat: '2D', title: '2. RECTANGLE (직사각형)', x: 350, y: 60, w: 260, h: 170,
+        formulas: ['Perimeter = 2(l + b)', 'Area = l × b'],
+        draw: (ctx, x, y, t) => {
+          ctx.strokeRect(x, y + 10, 70, 40);
+          ctx.fillText('b', x + 76, y + 34);
+          ctx.fillText('l', x + 30, y + 66);
+        }
+      },
+      { id: 3, cat: '2D', title: '3. TRIANGLE (삼각형)', x: 640, y: 60, w: 260, h: 170,
+        formulas: ['Area = ½ × b × h', 'Perimeter = a + b + c'],
+        draw: (ctx, x, y, t) => {
+          ctx.beginPath();
+          ctx.moveTo(x + 35, y + 5);
+          ctx.lineTo(x + 5, y + 55);
+          ctx.lineTo(x + 65, y + 55);
+          ctx.closePath();
+          ctx.stroke();
+          ctx.setLineDash([2, 2]);
+          ctx.beginPath(); ctx.moveTo(x + 35, y + 5); ctx.lineTo(x + 35, y + 55); ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillText('h', x + 38, y + 35);
+          ctx.fillText('b', x + 30, y + 68);
+        }
+      },
+      { id: 4, cat: '2D', title: '4. PARALLELOGRAM (평행사변형)', x: 60, y: 260, w: 260, h: 170,
+        formulas: ['Area = b × h', '대변의 길이가 서로 같음'],
+        draw: (ctx, x, y, t) => {
+          ctx.beginPath();
+          ctx.moveTo(x + 20, y + 15); ctx.lineTo(x + 70, y + 15);
+          ctx.lineTo(x + 55, y + 52); ctx.lineTo(x + 5, y + 52);
+          ctx.closePath(); ctx.stroke();
+          ctx.setLineDash([2, 2]);
+          ctx.beginPath(); ctx.moveTo(x + 20, y + 15); ctx.lineTo(x + 20, y + 52); ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillText('h', x + 23, y + 36);
+          ctx.fillText('b', x + 28, y + 66);
+        }
+      },
+      { id: 5, cat: '2D', title: '5. RHOMBUS (마름모)', x: 350, y: 260, w: 260, h: 170,
+        formulas: ['Area = ½ × d₁ × d₂', 'Perimeter = 4a'],
+        draw: (ctx, x, y, t) => {
+          ctx.beginPath();
+          ctx.moveTo(x + 35, y + 5); ctx.lineTo(x + 65, y + 35);
+          ctx.lineTo(x + 35, y + 65); ctx.lineTo(x + 5, y + 35);
+          ctx.closePath(); ctx.stroke();
+          ctx.setLineDash([2, 2]);
+          ctx.beginPath(); ctx.moveTo(x + 35, y + 5); ctx.lineTo(x + 35, y + 65);
+          ctx.moveTo(x + 5, y + 35); ctx.lineTo(x + 65, y + 35); ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillText('a', x + 55, y + 20);
+        }
+      },
+      { id: 6, cat: '2D', title: '7. CIRCLE (원)', x: 640, y: 260, w: 260, h: 170,
+        formulas: ['Circumference = 2πr', 'Area = πr²'],
+        draw: (ctx, x, y, t) => {
+          ctx.beginPath();
+          ctx.arc(x + 35, y + 35, 26, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(x + 35, y + 35); ctx.lineTo(x + 61, y + 35); ctx.stroke();
+          ctx.fillText('r', x + 45, y + 30);
+        }
+      },
+
+      // 2. 입체도형 (3D Geometry - 회전 애니메이션)
+      { id: 7, cat: '3D', title: '10. CUBE (정육면체)', x: 60, y: 460, w: 260, h: 200,
+        formulas: ['TSA = 6a²', 'Volume = a³', 'Diagonal = a√3'],
+        draw: (ctx, x, y, t) => {
+          // 실시간 회전하는 3D 큐브
+          const cx = x + 35, cy = y + 40, size = 20;
+          const cos = Math.cos(t * 0.02), sin = Math.sin(t * 0.02);
+          const nodes = [
+            [-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],
+            [-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]
+          ].map(([nx, ny, nz]) => {
+            const rx = nx * cos - nz * sin;
+            const rz = nx * sin + nz * cos;
+            return [cx + rx * size, cy + ny * size * 0.8 - rz * 6];
+          });
+          const edges = [
+            [0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],
+            [0,4],[1,5],[2,6],[3,7]
+          ];
+          ctx.beginPath();
+          edges.forEach(([s, e]) => {
+            ctx.moveTo(nodes[s][0], nodes[s][1]);
+            ctx.lineTo(nodes[e][0], nodes[e][1]);
+          });
+          ctx.stroke();
+          ctx.fillText('a', cx + 24, cy + 25);
+        }
+      },
+      { id: 8, cat: '3D', title: '11. CUBOID (직육면체)', x: 350, y: 460, w: 260, h: 200,
+        formulas: ['TSA = 2(lb + bh + hl)', 'Volume = l × b × h', 'Diagonal = √(l²+b²+h²)'],
+        draw: (ctx, x, y, t) => {
+          ctx.strokeRect(x + 5, y + 18, 48, 28);
+          ctx.strokeRect(x + 18, y + 5, 48, 28);
+          ctx.beginPath();
+          ctx.moveTo(x + 5, y + 18); ctx.lineTo(x + 18, y + 5);
+          ctx.moveTo(x + 53, y + 18); ctx.lineTo(x + 66, y + 5);
+          ctx.moveTo(x + 5, y + 46); ctx.lineTo(x + 18, y + 33);
+          ctx.moveTo(x + 53, y + 46); ctx.lineTo(x + 66, y + 33);
+          ctx.stroke();
+          ctx.fillText('l', x + 25, y + 60);
+          ctx.fillText('b', x + 58, y + 42);
+          ctx.fillText('h', x + 70, y + 20);
+        }
+      },
+      { id: 9, cat: '3D', title: '12. CYLINDER (원기둥)', x: 640, y: 460, w: 260, h: 200,
+        formulas: ['CSA = 2πrh', 'TSA = 2πr(h + r)', 'Volume = πr²h'],
+        draw: (ctx, x, y, t) => {
+          const cx = x + 35, rx = 24, ry = 7;
+          ctx.beginPath(); ctx.ellipse(cx, y + 12, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(cx - rx, y + 12); ctx.lineTo(cx - rx, y + 52);
+          ctx.moveTo(cx + rx, y + 12); ctx.lineTo(cx + rx, y + 52);
+          ctx.stroke();
+          ctx.beginPath(); ctx.ellipse(cx, y + 52, rx, ry, 0, 0, Math.PI); ctx.stroke();
+          ctx.fillText('h', cx + rx + 5, y + 35);
+          ctx.fillText('r', cx + 4, y + 11);
+        }
+      },
+      { id: 10, cat: '3D', title: '13. CONE (원뿔)', x: 930, y: 460, w: 260, h: 200,
+        formulas: ['CSA = πrl', 'Volume = ⅓πr²h', 'Slant l = √(r²+h²)'],
+        draw: (ctx, x, y, t) => {
+          const cx = x + 35;
+          ctx.beginPath();
+          ctx.moveTo(cx - 24, y + 54); ctx.lineTo(cx, y + 8); ctx.lineTo(cx + 24, y + 54);
+          ctx.stroke();
+          ctx.beginPath(); ctx.ellipse(cx, y + 54, 24, 7, 0, 0, Math.PI * 2); ctx.stroke();
+          ctx.setLineDash([2, 2]);
+          ctx.beginPath(); ctx.moveTo(cx, y + 8); ctx.lineTo(cx, y + 54); ctx.lineTo(cx + 24, y + 54); ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillText('h', cx - 10, y + 36);
+          ctx.fillText('l', cx + 18, y + 30);
+          ctx.fillText('r', cx + 8, y + 52);
+        }
+      },
+
+      // 3. 대수 & 방정식 (Algebra & Identities)
+      { id: 11, cat: 'ALG', title: '18. IMPORTANT IDENTITIES', x: 60, y: 690, w: 320, h: 220,
+        formulas: [
+          '(a + b)² = a² + b² + 2ab',
+          '(a - b)² = a² + b² - 2ab',
+          'a² - b² = (a - b)(a + b)',
+          '(a + b)³ = a³ + b³ + 3ab(a+b)',
+          '(a - b)³ = a³ - b³ - 3ab(a-b)'
+        ],
+        draw: (ctx, x, y, t) => {
+          // 기하학적 제곱 다이어그램 (a+b)^2
+          ctx.strokeRect(x + 5, y + 10, 40, 40);
+          ctx.strokeRect(x + 45, y + 10, 16, 40);
+          ctx.strokeRect(x + 5, y + 50, 40, 16);
+          ctx.strokeRect(x + 45, y + 50, 16, 16);
+          ctx.fillText('a²', x + 20, y + 34);
+          ctx.fillText('b²', x + 49, y + 62);
+        }
+      },
+      { id: 12, cat: 'ALG', title: '19. QUADRATIC FORMULA', x: 410, y: 690, w: 300, h: 220,
+        formulas: [
+          'ax² + bx + c = 0',
+          'x = [ -b ± √(b² - 4ac) ] / 2a',
+          '판별식 D = b² - 4ac',
+          '• D > 0 (서로 다른 두 실근)',
+          '• D = 0 (중근), D < 0 (허근)'
+        ],
+        draw: (ctx, x, y, t) => {
+          // 동적 포물선 그래프
+          const ox = x + 35, oy = y + 45;
+          ctx.beginPath(); ctx.moveTo(x + 5, oy); ctx.lineTo(x + 65, oy); ctx.stroke();
+          ctx.beginPath();
+          const wave = Math.sin(t * 0.04) * 6;
+          for (let px = -22; px <= 22; px += 2) {
+            const py = 0.06 * px * px - 18 + wave;
+            if (px === -22) ctx.moveTo(ox + px, oy + py);
+            else ctx.lineTo(ox + px, oy + py);
+          }
+          ctx.stroke();
+        }
+      },
+      { id: 13, cat: 'ALG', title: '20~22. 거듭제곱 합 (SUM OF POWERS)', x: 740, y: 690, w: 320, h: 220,
+        formulas: [
+          '1 + 2 + ... + n = n(n+1) / 2',
+          '1² + 2² + ... + n² = n(n+1)(2n+1) / 6',
+          '1³ + 2³ + ... + n³ = [ n(n+1) / 2 ]²'
+        ],
+        draw: (ctx, x, y, t) => {
+          // 계단식 합 시각화
+          for (let i = 0; i < 4; i++) {
+            ctx.strokeRect(x + 10 + i * 14, y + 50 - i * 12, 12, (i + 1) * 12);
+          }
+          ctx.fillText('Σ', x + 32, y + 16);
+        }
+      },
+
+      // 4. 삼각비 & 좌표기하 (Trigonometry & Coordinate Geometry)
+      { id: 14, cat: 'GEO', title: '16. RIGHT TRIANGLE (피타고라스)', x: 60, y: 940, w: 310, h: 200,
+        formulas: [
+          '피타고라스 정리: c² = a² + b²',
+          '빗변(Hypotenuse) = √(a² + b²)'
+        ],
+        draw: (ctx, x, y, t) => {
+          ctx.beginPath();
+          ctx.moveTo(x + 10, y + 8); ctx.lineTo(x + 10, y + 52); ctx.lineTo(x + 62, y + 52);
+          ctx.closePath(); ctx.stroke();
+          ctx.strokeRect(x + 10, y + 44, 8, 8);
+          ctx.fillText('a', x + 2, y + 32);
+          ctx.fillText('b', x + 32, y + 66);
+          ctx.fillText('c', x + 40, y + 26);
+        }
+      },
+      { id: 15, cat: 'GEO', title: '17. TRIGONOMETRIC RATIOS (삼각비)', x: 400, y: 940, w: 330, h: 200,
+        formulas: [
+          'sin θ = Perpendicular / Hypotenuse (높이/빗변)',
+          'cos θ = Base / Hypotenuse (밑변/빗변)',
+          'tan θ = Perpendicular / Base (높이/밑변)',
+          'sin²θ + cos²θ = 1'
+        ],
+        draw: (ctx, x, y, t) => {
+          const cx = x + 38, cy = y + 35, r = 24;
+          ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+          const ang = t * 0.03;
+          const px = cx + r * Math.cos(ang), py = cy - r * Math.sin(ang);
+          ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(px, py); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(px, cy); ctx.lineTo(px, py); ctx.stroke();
+          ctx.fillText('θ', cx + 4, cy - 4);
+        }
+      },
+      { id: 16, cat: 'GEO', title: '23~27. 좌표기하학 (COORDINATES)', x: 760, y: 940, w: 340, h: 200,
+        formulas: [
+          '거리 d = √[ (x₂ - x₁)² + (y₂ - y₁)² ]',
+          '내분점 = ( [mx₂+nx₁]/(m+n), [my₂+ny₁]/(m+n) )',
+          '기울기 m = (y₂ - y₁) / (x₂ - x₁)',
+          '직선의 방정식: y - y₁ = m(x - x₁)'
+        ],
+        draw: (ctx, x, y, t) => {
+          ctx.beginPath();
+          ctx.moveTo(x + 8, y + 50); ctx.lineTo(x + 60, y + 10); ctx.stroke();
+          ctx.beginPath(); ctx.arc(x + 8, y + 50, 3, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(x + 60, y + 10, 3, 0, Math.PI * 2); ctx.fill();
+          ctx.fillText('d', x + 36, y + 26);
+        }
+      },
+
+      // 5. 고급 수학 (Advanced Calculus & Analysis)
+      { id: 17, cat: 'ADV', title: 'EULER & CALCULUS (오일러·미적분)', x: 60, y: 1170, w: 480, h: 190,
+        formulas: [
+          '★ 세상에서 가장 아름다운 공식: e^(iπ) + 1 = 0',
+          'd/dx [ xⁿ ] = n · xⁿ⁻¹',
+          '미적분학 기본정리: ∫[a,b] f(x) dx = F(b) - F(a)'
+        ],
+        draw: (ctx, x, y, t) => {
+          const cx = x + 40, cy = y + 40, r = 26;
+          ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+          const ang = t * 0.05;
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.lineTo(cx + r * Math.cos(ang), cy - r * Math.sin(ang));
+          ctx.stroke();
+          ctx.fillText('e^(iθ)', cx - 18, y + 78);
+        }
+      },
+      { id: 18, cat: 'ADV', title: 'HERON & GAUSS (헤론 & 정규분포)', x: 570, y: 1170, w: 480, h: 190,
+        formulas: [
+          '헤론의 공식: Area = √[ s(s-a)(s-b)(s-c) ], s=(a+b+c)/2',
+          '다각형 내각 총합 = (n - 2) × 180°',
+          '가우스 정규분포: f(x) = (1 / σ√(2π)) · e^(-(x-μ)² / 2σ²)'
+        ],
+        draw: (ctx, x, y, t) => {
+          const gx = x + 50, gy = y + 55;
+          ctx.beginPath(); ctx.moveTo(x + 10, gy); ctx.lineTo(x + 90, gy); ctx.stroke();
+          ctx.beginPath();
+          for (let px = -35; px <= 35; px += 2) {
+            const py = Math.exp(-(px * px) / (2 * 14 * 14)) * 36;
+            if (px === -35) ctx.moveTo(gx + px, gy - py);
+            else ctx.lineTo(gx + px, gy - py);
+          }
+          ctx.stroke();
+        }
+      }
+    ];
+
+    // ====================================================
+    // 리사이즈 & 캔버스 렌더링 루프
+    // ====================================================
+    function resize() {
+      const rect = container.getBoundingClientRect();
+      dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function drawGrid(theme) {
+      ctx.fillStyle = theme.bg;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      ctx.translate(cam.x * dpr, cam.y * dpr);
+      ctx.scale(cam.zoom * dpr, cam.zoom * dpr);
+
+      // 격자선
+      ctx.strokeStyle = theme.gridLine;
+      ctx.lineWidth = 1;
+      const gridSize = 40;
+      const startX = -cam.x - 200;
+      const endX = startX + canvas.width / cam.zoom + 400;
+      const startY = -cam.y - 200;
+      const endY = startY + canvas.height / cam.zoom + 400;
+
+      ctx.beginPath();
+      for (let x = Math.floor(startX / gridSize) * gridSize; x < endX; x += gridSize) {
+        ctx.moveTo(x, startY);
+        ctx.lineTo(x, endY);
+      }
+      for (let y = Math.floor(startY / gridSize) * gridSize; y < endY; y += gridSize) {
+        ctx.moveTo(startX, y);
+        ctx.lineTo(endX, y);
+      }
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function render() {
+      const theme = themes[currentTheme];
+      drawGrid(theme);
+
+      ctx.save();
+      ctx.translate(cam.x * dpr, cam.y * dpr);
+      ctx.scale(cam.zoom * dpr, cam.zoom * dpr);
+
+      formulaData.forEach(card => {
+        // 필터링 적용
+        const isDimmed = (activeFilter !== 'ALL' && card.cat !== activeFilter);
+        ctx.globalAlpha = isDimmed ? 0.25 : 1.0;
+
+        // 카드 외곽 바탕
+        ctx.fillStyle = theme.cardBg;
+        ctx.strokeStyle = theme.cardBorder;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.roundRect(card.x, card.y, card.w, card.h, 10);
+        ctx.fill();
+        ctx.stroke();
+
+        // 카테고리 태그
+        ctx.fillStyle = theme.tagBg;
+        ctx.beginPath();
+        ctx.roundRect(card.x + 12, card.y + 10, 42, 18, 4);
+        ctx.fill();
+        ctx.fillStyle = theme.accent;
+        ctx.font = "bold 11px 'Noto Sans KR', sans-serif";
+        ctx.fillText(card.cat, card.x + 20, card.y + 23);
+
+        // 타이틀
+        ctx.fillStyle = theme.title;
+        ctx.font = `bold 16px ${theme.fontFamily}`;
+        ctx.fillText(card.title, card.x + 62, card.y + 24);
+
+        // 공식 텍스트
+        ctx.fillStyle = theme.text;
+        ctx.font = `14px ${theme.fontFamily}`;
+        card.formulas.forEach((line, idx) => {
+          ctx.fillText(line, card.x + 16, card.y + 56 + idx * 22);
+        });
+
+        // 우측 하단 기하학/애니메이션 다이어그램 영역
+        ctx.save();
+        ctx.strokeStyle = theme.accent;
+        ctx.fillStyle = theme.accent;
+        ctx.lineWidth = 1.5;
+        ctx.font = `13px ${theme.fontFamily}`;
+        const diagX = card.x + card.w - 85;
+        const diagY = card.y + card.h - 85;
+        card.draw(ctx, diagX, diagY, time);
+        ctx.restore();
+      });
+
+      ctx.restore();
+      time += 1;
+      requestAnimationFrame(render);
+    }
+
+    // ====================================================
+    // 마우스 인터랙션 (Pan & Zoom & Click Focus)
+    // ====================================================
+    container.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      dragStart = { x: e.clientX - cam.x, y: e.clientY - cam.y };
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (isDragging) {
+        cam.x = e.clientX - dragStart.x;
+        cam.y = e.clientY - dragStart.y;
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
+
+    container.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const zoomFactor = 1.1;
+      const mouseX = e.clientX - container.getBoundingClientRect().left;
+      const mouseY = e.clientY - container.getBoundingClientRect().top;
+
+      const worldX = (mouseX - cam.x) / cam.zoom;
+      const worldY = (mouseY - cam.y) / cam.zoom;
+
+      if (e.deltaY < 0) {
+        cam.zoom = Math.min(cam.zoom * zoomFactor, 2.5);
+      } else {
+        cam.zoom = Math.max(cam.zoom / zoomFactor, 0.4);
+      }
+
+      cam.x = mouseX - worldX * cam.zoom;
+      cam.y = mouseY - worldY * cam.zoom;
+    }, { passive: false });
+
+    // 카드 클릭 시 부드럽게 줌 포커스
+    container.addEventListener('click', (e) => {
+      const rect = container.getBoundingClientRect();
+      const clickX = (e.clientX - rect.left - cam.x) / cam.zoom;
+      const clickY = (e.clientY - rect.top - cam.y) / cam.zoom;
+
+      const clickedCard = formulaData.find(c => 
+        clickX >= c.x && clickX <= c.x + c.w &&
+        clickY >= c.y && clickY <= c.y + c.h
+      );
+
+      if (clickedCard) {
+        smoothFocus(clickedCard.x - 60, clickedCard.y - 60, 1.2);
+      }
+    });
+
+    function smoothFocus(targetX, targetY, targetZoom) {
+      const startCam = { ...cam };
+      const destX = -targetX * targetZoom + 200;
+      const destY = -targetY * targetZoom + 150;
+      let progress = 0;
+
+      function step() {
+        progress += 0.08;
+        cam.x = startCam.x + (destX - startCam.x) * progress;
+        cam.y = startCam.y + (destY - startCam.y) * progress;
+        cam.zoom = startCam.zoom + (targetZoom - startCam.zoom) * progress;
+        if (progress < 1) requestAnimationFrame(step);
+      }
+      step();
+    }
+
+    // 초기 렌더링 시작
+    render();
+  </script>
+</body>
+</html>
