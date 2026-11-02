@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude 블로그 자동 작성기</title>
+<meta name="description" content="주제만 입력하면 Claude API로 SEO 최적화 워드프레스 글, 제목 3개, 메타 설명, 태그, 썸네일을 한 번에 만드는 도구">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--tx:#1d2433;--mut:#5d6778;--bd:#dde3ee;--ac:#5b47ff;--ac2:#00b4d8;--ok:#1e8e3e;--warn:#c77700;--bad:#d93025;--code:#f1f3f8}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1320;--card:#171c2c;--tx:#e7eaf3;--mut:#9aa3b5;--bd:#2a3146;--code:#1f2538}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:"Noto Sans KR",system-ui,sans-serif;line-height:1.6;word-break:keep-all}
+header{background:linear-gradient(120deg,#2b1fa8,#5b47ff 55%,#00b4d8);color:#fff;padding:28px 16px}
+header .in,main{max-width:1080px;margin:0 auto}
+header h1{margin:0;font-size:1.6rem}
+header p{margin:.3em 0 0;opacity:.9}
+main{padding:20px 16px 60px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:18px;margin-bottom:16px}
+.card h2{margin:0 0 12px;font-size:1.15rem}
+label{display:block;font-weight:700;margin:12px 0 6px;font-size:.95rem}
+label small{font-weight:400;color:var(--mut)}
+input[type=text],input[type=password],textarea,select{width:100%;padding:10px 12px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit}
+textarea{min-height:90px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px}
+@media(max-width:720px){.row,.row3{grid-template-columns:1fr}}
+button{font:inherit;font-weight:700;border:0;border-radius:8px;padding:10px 16px;cursor:pointer;background:var(--ac);color:#fff}
+button.sec{background:transparent;color:var(--ac);border:1px solid var(--ac)}
+button:disabled{opacity:.5;cursor:wait}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.note{font-size:.85rem;color:var(--mut)}
+.status{margin-top:10px;font-size:.95rem}
+.status.err{color:var(--bad);white-space:pre-wrap}
+.hidden{display:none}
+.checks{list-style:none;padding:0;margin:0}
+.checks li{padding:8px 10px;border-bottom:1px solid var(--bd);display:flex;gap:10px}
+.checks li b{display:block}
+.checks .ic{font-weight:900;min-width:20px}
+.ok .ic{color:var(--ok)}.warn .ic{color:var(--warn)}.bad .ic{color:var(--bad)}
+.titleopt{display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--bd);border-radius:8px;margin-bottom:8px}
+.titleopt input[type=radio]{margin-top:6px}
+.titleopt input[type=text]{flex:1}
+.badge{display:inline-block;font-size:.75rem;background:var(--ac);color:#fff;border-radius:20px;padding:1px 8px;margin-left:6px}
+.count{font-size:.85rem;font-weight:700}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tags span{background:var(--code);border:1px solid var(--bd);border-radius:20px;padding:2px 10px;font-size:.88rem}
+canvas{width:100%;height:auto;border-radius:8px;border:1px solid var(--bd);display:block}
+iframe{width:100%;height:640px;border:1px solid var(--bd);border-radius:8px;background:#fff}
+.tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.tabs button{background:var(--code);color:var(--tx);border:1px solid var(--bd)}
+.tabs button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+pre{background:var(--code);border:1px solid var(--bd);border-radius:8px;padding:12px;max-height:340px;overflow:auto;white-space:pre-wrap;word-break:break-all;font-size:.8rem}
+.fact{background:#fff8e6;color:#5c4400;border:1px solid #f0d58c;border-radius:8px;padding:10px 14px}
+.fact ul{margin:.3em 0 0;padding-left:1.2em}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:s 1s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header><div class="in">
+  <h1>Claude 블로그 자동 작성기</h1>
+  <p>주제 입력 → SEO 글 · 제목 3개 · 메타 설명 · 태그 · 썸네일 · SEO 점검까지 한 번에</p>
+</div></header>
+
+<main>
+<!-- API 설정 -->
+<section class="card" aria-labelledby="h-api">
+  <h2 id="h-api">1. Claude API 연결</h2>
+  <div class="row3">
+    <div>
+      <label for="apiKey">API 키 <small>(console.anthropic.com에서 발급)</small></label>
+      <input id="apiKey" type="password" placeholder="sk-ant-..." autocomplete="off">
+    </div>
+    <div>
+      <label for="model">모델</label>
+      <select id="model"><option value="claude-sonnet-4-5">claude-sonnet-4-5</option></select>
+    </div>
+    <div>
+      <label for="maxTok">최대 출력 토큰</label>
+      <select id="maxTok"><option>8000</option><option selected>12000</option><option>16000</option></select>
+    </div>
+  </div>
+  <div class="btns">
+    <button class="sec" id="btnModels" type="button">모델 목록 불러오기</button>
+    <label style="display:flex;gap:6px;align-items:center;margin:0;font-weight:400"><input type="checkbox" id="remember"> 이 브라우저에 키 기억하기</label>
+  </div>
+  <p class="note">키는 이 브라우저 안에만 저장되고 Anthropic API로만 전송됩니다. <b>키를 HTML 파일이나 GitHub 저장소에 절대 직접 적지 마세요.</b> 공용 PC에서는 "기억하기"를 끄세요.</p>
+</section>
+
+<!-- 입력 -->
+<section class="card" aria-labelledby="h-in">
+  <h2 id="h-in">2. 주제 입력</h2>
+  <label for="topic">주제 <small>(필수)</small></label>
+  <input id="topic" type="text" placeholder="예: KT 토큰팩토리와 RAG 원리">
+  <div class="row">
+    <div>
+      <label for="keyword">포커스 키워드 <small>(비우면 자동 선정)</small></label>
+      <input id="keyword" type="text" placeholder="예: 토큰팩토리">
+    </div>
+    <div>
+      <label for="category">카테고리</label>
+      <select id="category">
+        <option value="ai-tools">IT·소프트웨어 &gt; AI·생산성 도구</option>
+        <option value="cloud-hosting">IT·소프트웨어 &gt; 클라우드·웹호스팅</option>
+        <option value="vpn-security">IT·소프트웨어 &gt; VPN·보안</option>
+        <option value="business-tools">IT·소프트웨어 &gt; 업무·회계 툴</option>
+        <option value="finance">금융</option>
+        <option value="policy">정책·복지</option>
+        <option value="health">건강·의학</option>
+        <option value="economy">경제·투자</option>
+      </select>
+    </div>
+  </div>
+  <label for="source">참고 자료 <small>(선택 · 분석 내용, 기사 요약, 수치 등을 붙여넣으면 이를 근거로 작성)</small></label>
+  <textarea id="source" placeholder="여기에 붙여넣은 내용을 사실 확인하고 정리해서 글을 씁니다. 비워두면 일반 지식으로 작성합니다."></textarea>
+  <div class="row">
+    <div>
+      <label for="tone">문체</label>
+      <select id="tone"><option>친절한 정보형 (~합니다)</option><option>전문 분석형</option><option>쉬운 입문자용</option></select>
+    </div>
+    <div>
+      <label for="length">분량</label>
+      <select id="length"><option value="3000">보통 (약 3,000자)</option><option value="4500" selected>길게 (약 4,500자)</option><option value="6000">아주 길게 (약 6,000자)</option></select>
+    </div>
+  </div>
+  <div class="btns">
+    <button id="btnGen" type="button">글 생성하기</button>
+  </div>
+  <div id="status" class="status" role="status" aria-live="polite"></div>
+</section>
+
+<!-- 결과 -->
+<div id="result" class="hidden">
+
+<section class="card" aria-labelledby="h-seo">
+  <h2 id="h-seo">3. 콘텐츠 SEO 점검</h2>
+  <ul id="checks" class="checks"></ul>
+</section>
+
+<section class="card" aria-labelledby="h-title">
+  <h2 id="h-title">4. 제목 <small class="note">(가장 유리한 1개에 추천 표시 · 선택한 제목이 글과 썸네일에 반영)</small></h2>
+  <div id="titles"></div>
+  <p id="titleReason" class="note"></p>
+</section>
+
+<section class="card" aria-labelledby="h-meta">
+  <h2 id="h-meta">5. 메타 설명 · 슬러그 · 태그</h2>
+  <label for="meta">메타 설명 <span id="metaCount" class="count"></span></label>
+  <textarea id="meta" rows="3"></textarea>
+  <div class="btns"><button class="sec" type="button" data-copy="meta">메타 설명 복사</button></div>
+  <div class="row">
+    <div><label for="slug">슬러그</label><input id="slug" type="text"></div>
+    <div><label for="focus">포커스 키워드</label><input id="focus" type="text"></div>
+  </div>
+  <label>태그</label>
+  <div id="tagView" class="tags"></div>
+  <textarea id="tags" rows="2" style="margin-top:8px"></textarea>
+  <div class="btns"><button class="sec" type="button" data-copy="tags">태그 복사</button></div>
+</section>
+
+<section class="card" aria-labelledby="h-thumb">
+  <h2 id="h-thumb">6. 썸네일 (1200×630)</h2>
+  <canvas id="thumb" width="1200" height="630" role="img" aria-label="생성된 썸네일 미리보기"></canvas>
+  <div class="row" style="margin-top:8px">
+    <div><label for="tHead">큰 제목</label><input id="tHead" type="text"></div>
+    <div><label for="tSub">부제</label><input id="tSub" type="text"></div>
+  </div>
+  <div class="row3">
+    <div><label for="tChips">해시태그 칩 <small>(쉼표 구분)</small></label><input id="tChips" type="text"></div>
+    <div><label for="tBadge">배지</label><input id="tBadge" type="text"></div>
+    <div><label for="tTheme">색상</label><select id="tTheme"><option value="violet">퍼플</option><option value="blue">블루</option><option value="green">그린</option><option value="red">레드</option></select></div>
+  </div>
+  <label for="thumbAlt">대표 이미지 alt</label>
+  <input id="thumbAlt" type="text">
+  <div class="btns">
+    <button type="button" id="dlWebp">WebP 다운로드</button>
+    <button class="sec" type="button" id="dlPng">PNG 다운로드</button>
+  </div>
+</section>
+
+<section class="card" aria-labelledby="h-out">
+  <h2 id="h-out">7. 본문 HTML</h2>
+  <div class="tabs" role="tablist">
+    <button type="button" class="on" data-tab="preview">미리보기</button>
+    <button type="button" data-tab="wp">워드프레스용 (붙여넣기)</button>
+    <button type="button" data-tab="full">전체 HTML 문서</button>
+  </div>
+  <div data-pane="preview"><iframe id="preview" title="글 미리보기" sandbox></iframe></div>
+  <div data-pane="wp" class="hidden">
+    <p class="note">워드프레스 '사용자 정의 HTML' 블록(클래식 편집기는 '텍스트' 탭)에 그대로 붙여넣으세요. 줄바꿈 없는 한 줄 형태라 &lt;br&gt; 자동 삽입 문제가 생기지 않습니다. 글 제목(H1)은 워드프레스 제목 칸에 입력합니다.</p>
+    <pre id="wpOut"></pre>
+    <div class="btns"><button type="button" data-copy="wpOut">워드프레스용 HTML 복사</button></div>
+  </div>
+  <div data-pane="full" class="hidden">
+    <p class="note">SEO 점검용 독립 HTML 문서입니다(title·메타 설명·H1·OG 태그·FAQ 구조화 데이터 포함).</p>
+    <pre id="fullOut"></pre>
+    <div class="btns"><button type="button" data-copy="fullOut">전체 HTML 복사</button><button class="sec" type="button" id="dlHtml">.html 다운로드</button></div>
+  </div>
+</section>
+
+<section id="factBox" class="card hidden" aria-labelledby="h-fact">
+  <h2 id="h-fact">8. 발행 전 사실 확인 필요</h2>
+  <div class="fact"><ul id="facts"></ul></div>
+</section>
+
+</div>
+</main>
+
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const API = 'https://api.anthropic.com/v1';
+const SITE = { name: 'K-스마트 정보통', url: 'https://ksmartinfo.com' };
+let data = null;
+
+/* ---------- 저장소 (try/catch) ---------- */
+const store = {
+  get(k){ try{ return localStorage.getItem(k) ?? sessionStorage.getItem(k); }catch(e){ return null; } },
+  set(k,v,persist){ try{ (persist?localStorage:sessionStorage).setItem(k,v); if(persist) sessionStorage.removeItem(k); else localStorage.removeItem(k); }catch(e){} },
+  del(k){ try{ localStorage.removeItem(k); sessionStorage.removeItem(k); }catch(e){} }
+};
+const savedKey = store.get('cba_key');
+if (savedKey){ $('apiKey').value = savedKey; try{ $('remember').checked = !!localStorage.getItem('cba_key'); }catch(e){} }
+const savedModel = store.get('cba_model');
+function saveKey(){ const k=$('apiKey').value.trim(); if(k) store.set('cba_key',k,$('remember').checked); else store.del('cba_key'); }
+$('apiKey').addEventListener('change', saveKey);
+$('remember').addEventListener('change', saveKey);
+$('model').addEventListener('change', () => store.set('cba_model',$('model').value,true));
+
+function headers(){
+  return {
+    'x-api-key': $('apiKey').value.trim(),
+    'anthropic-version': '2023-06-01',
+    'anthropic-dangerous-direct-browser-access': 'true',
+    'content-type': 'application/json'
+  };
+}
+function setStatus(msg, err){ const s=$('status'); s.className='status'+(err?' err':''); s.innerHTML=msg; }
+
+/* ---------- 모델 목록 ---------- */
+async function loadModels(silent){
+  if(!$('apiKey').value.trim()){ if(!silent) setStatus('API 키를 먼저 입력하세요.',true); return; }
+  try{
+    const r = await fetch(API+'/models?limit=100',{headers:headers()});
+    const j = await r.json();
+    if(!r.ok) throw new Error(j.error?.message || r.status);
+    const ids = (j.data||[]).map(m=>m.id);
+    if(!ids.length) return;
+    const sel=$('model'); sel.innerHTML='';
+    ids.forEach(id=>{ const o=document.createElement('option'); o.value=o.textContent=id; sel.appendChild(o); });
+    const pick = (savedModel && ids.includes(savedModel)) ? savedModel : (ids.find(i=>/sonnet/.test(i)) || ids[0]);
+    sel.value = pick;
+    if(!silent) setStatus('모델 '+ids.length+'개를 불러왔습니다.');
+  }catch(e){ if(!silent) setStatus('모델 목록을 불러오지 못했습니다: '+e.message,true); }
+}
+$('btnModels').addEventListener('click',()=>{ saveKey(); loadModels(false); });
+if(savedKey) loadModels(true);
+
+/* ---------- 프롬프트 ---------- */
+const TOOL = {
+  name: 'seo_post',
+  description: '워드프레스 SEO 블로그 글 패키지를 반환한다.',
+  input_schema: {
+    type:'object',
+    properties:{
+      focus_keyword:{type:'string',description:'검색량이 기대되는 핵심 키워드 1개(2~4어절)'},
+      titles:{type:'array',items:{type:'string'},minItems:3,maxItems:3,description:'제목 후보 3개. 모두 포커스 키워드를 맨 앞쪽에 포함, 공백 포함 25~45자'},
+      recommended_title_index:{type:'integer',minimum:0,maximum:2},
+      title_reason:{type:'string',description:'추천 이유 한 문장'},
+      meta_description:{type:'string',description:'공백 포함 140~160자. 포커스 키워드를 띄어쓰기까지 그대로 맨 앞에 포함. 본문에 실제로 있는 내용만.'},
+      slug:{type:'string',description:'포커스 키워드 중심의 짧은 슬러그(3~5단어, 소문자, 하이픈, 가운뎃점·특수문자 금지). 예: kt-토큰팩토리'},
+      tags:{type:'array',items:{type:'string'},minItems:12,maxItems:20},
+      summary_points:{type:'array',items:{type:'string'},minItems:3,maxItems:5,description:'핵심 요약 한 줄씩'},
+      body_html:{type:'string',description:'본문 HTML 조각'},
+      faq:{type:'array',minItems:3,maxItems:5,items:{type:'object',properties:{q:{type:'string'},a:{type:'string'}},required:['q','a']}},
+      thumbnail:{type:'object',properties:{
+        badge:{type:'string',description:'4~8자 배지 문구'},
+        headline:{type:'string',description:'썸네일 큰 제목, 공백 포함 16자 이내'},
+        sub:{type:'string',description:'부제, 26자 이내'},
+        chips:{type:'array',items:{type:'string'},minItems:3,maxItems:4,description:'#없이 짧은 키워드'}
+      },required:['badge','headline','sub','chips']},
+      image_alt:{type:'string',description:'대표 이미지 alt. 포커스 키워드 포함'},
+      fact_check:{type:'array',items:{type:'string'},description:'발행 전 사람이 확인해야 할 수치·날짜·고유명사 주장 목록. 참고 자료에서 틀리거나 근거 없는 부분을 고쳤다면 무엇을 고쳤는지도 적기'}
+    },
+    required:['focus_keyword','titles','recommended_title_index','title_reason','meta_description','slug','tags','summary_points','body_html','faq','thumbnail','image_alt','fact_check']
+  }
+};
+
+function systemPrompt(){
+  return `당신은 한국어 SEO 블로그 전문 작가입니다. 블로그 "${SITE.name}"(${SITE.url}, 워드프레스+Yoast)에 올릴 글을 씁니다.
+
+[본문 body_html 규칙]
+- HTML 조각만 작성. <html>, <head>, <body>, <style>, <script>, <h1>, <img>, 인라인 style 속성 사용 금지.
+- 첫 문단 첫 문장에 포커스 키워드를 그대로 넣는다.
+- 제목 계층: <h2> 5~8개, 필요할 때만 그 아래 <h3>. 레벨을 건너뛰지 않는다(h2 없이 h3 금지, h4 사용 금지).
+- 모든 <h2>에 영문 소문자 하이픈 id를 붙인다(예: <h2 id="what-is">).
+- 포커스 키워드를 h2 중 최소 2개와 본문 전체에 자연스럽게 4~7회 사용(과도한 반복 금지).
+- 비교·수치는 <table>로: <caption>, <thead>, <th scope="col"> 포함. 목록은 <ul>/<ol>. 강조는 <strong>.
+- FAQ, 목차, 요약 박스, 면책 문구는 넣지 않는다(도구가 자동 추가).
+- 문단은 2~4문장으로 짧게.
+
+[정확성 규칙]
+- 참고 자료가 있으면 그것을 근거로 쓰되, 명백히 틀리거나 과장된 내용(예: "완벽히 해결", "최초", 출처 없는 통계)은 바로잡거나 완화하고 fact_check에 적는다.
+- 확실하지 않은 수치·날짜·고유명사는 지어내지 말고 일반적 표현으로 쓰거나 fact_check에 적는다.
+- 투자·의료·법률 주제는 단정적 권유를 피한다.
+
+[메타 설명] 공백 포함 140~160자(반드시 세어 볼 것). 포커스 키워드를 정확히 그대로 문장 맨 앞에 둔다.
+반드시 seo_post 도구 하나로만 응답한다.`;
+}
+function userPrompt(){
+  const kw=$('keyword').value.trim(), src=$('source').value.trim();
+  return `주제: ${$('topic').value.trim()}
+${kw?`포커스 키워드(반드시 사용): ${kw}`:'포커스 키워드: 주제에 맞게 직접 선정'}
+카테고리: ${$('category').selectedOptions[0].textContent}
+문체: ${$('tone').value}
+본문 분량: 공백 포함 약 ${$('length').value}자
+작성 기준일: ${new Date().toLocaleDateString('ko-KR')}
+${src?`\n[참고 자료 — 사실 확인 후 활용]\n${src}`:''}`;
+}
+
+/* ---------- 생성 ---------- */
+$('btnGen').addEventListener('click', generate);
+async function generate(){
+  if(!$('apiKey').value.trim()) return setStatus('API 키를 입력하세요.',true);
+  if(!$('topic').value.trim()) return setStatus('주제를 입력하세요.',true);
+  saveKey();
+  const btn=$('btnGen'); btn.disabled=true;
+  const t0=Date.now(); const timer=setInterval(()=>setStatus('<span class="spin"></span>Claude가 글을 쓰는 중… '+Math.round((Date.now()-t0)/1000)+'초 (보통 1~3분)'),1000);
+  try{
+    const r = await fetch(API+'/messages',{method:'POST',headers:headers(),body:JSON.stringify({
+      model:$('model').value, max_tokens:+$('maxTok').value,
+      system:systemPrompt(),
+      tools:[TOOL], tool_choice:{type:'tool',name:'seo_post'},
+      messages:[{role:'user',content:userPrompt()}]
+    })});
+    const j = await r.json();
+    if(!r.ok) throw new Error((j.error?.type||r.status)+': '+(j.error?.message||'요청 실패'));
+    const tu=(j.content||[]).find(c=>c.type==='tool_use');
+    if(!tu) throw new Error('응답에서 결과를 찾지 못했습니다.');
+    if(j.stop_reason==='max_tokens') throw new Error('출력이 최대 토큰에서 잘렸습니다. "최대 출력 토큰"을 늘리거나 분량을 줄여 다시 시도하세요.');
+    data = normalize(tu.input);
+    render();
+    const u=j.usage||{};
+    setStatus('완료! 입력 '+(u.input_tokens||0).toLocaleString()+' / 출력 '+(u.output_tokens||0).toLocaleString()+' 토큰 · '+Math.round((Date.now()-t0)/1000)+'초');
+  }catch(e){
+    setStatus('오류: '+e.message+(String(e.message).includes('Failed to fetch')?'\n네트워크 또는 CORS 문제입니다. https 주소(GitHub Pages)에서 실행 중인지 확인하세요.':''),true);
+  }finally{ clearInterval(timer); btn.disabled=false; }
+}
+
+/* ---------- 정리·보정 ---------- */
+function normalize(d){
+  let b=String(d.body_html||'');
+  b=b.replace(/<\s*(script|style)[\s\S]*?<\/\s*\1\s*>/gi,'')       // 스크립트·스타일 제거
+     .replace(/<\s*h1(\s[^>]*)?>/gi,'<h2$1>').replace(/<\/\s*h1\s*>/gi,'</h2>') // 본문 H1 → H2
+     .replace(/\son\w+="[^"]*"/gi,'').replace(/\sstyle="[^"]*"/gi,'');
+  // id 없는 h2에 id 부여
+  let n=0; b=b.replace(/<h2(?![^>]*\sid=)([^>]*)>/gi,(m,a)=>`<h2 id="sec-${++n}"${a}>`);
+  d.body_html=b;
+  d.slug=String(d.slug||'').toLowerCase().replace(/[·・\s_]+/g,'-').replace(/[^\p{L}\p{N}-]/gu,'').replace(/-+/g,'-').replace(/^-|-$/g,'');
+  d.tags=[...new Set((d.tags||[]).map(t=>String(t).trim()).filter(Boolean))];
+  return d;
+}
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const selTitle=()=>{ const r=document.querySelector('input[name=title]:checked'); return r? $('title'+r.value).value.trim() : ''; };
+
+/* ---------- 렌더 ---------- */
+function render(){
+  $('result').classList.remove('hidden');
+  // 제목
+  const ti=$('titles'); ti.innerHTML='';
+  data.titles.forEach((t,i)=>{
+    const rec=i===data.recommended_title_index;
+    ti.insertAdjacentHTML('beforeend',`<div class="titleopt"><input type="radio" name="title" value="${i}" id="r${i}" ${rec?'checked':''} aria-label="제목 ${i+1} 선택"><input type="text" id="title${i}" value="${esc(t)}" aria-label="제목 ${i+1}">${rec?'<span class="badge">추천</span>':''}</div>`);
+  });
+  $('titleReason').textContent='추천 이유: '+(data.title_reason||'');
+  // 메타 등
+  $('meta').value=data.meta_description; $('slug').value=data.slug; $('focus').value=data.focus_keyword;
+  $('tags').value=data.tags.join(', ');
+  $('tHead').value=data.thumbnail.headline; $('tSub').value=data.thumbnail.sub;
+  $('tChips').value=(data.thumbnail.chips||[]).join(', '); $('tBadge').value=data.thumbnail.badge;
+  $('thumbAlt').value=data.image_alt;
+  // 사실 확인
+  const f=data.fact_check||[]; $('factBox').classList.toggle('hidden',!f.length);
+  $('facts').innerHTML=f.map(x=>`<li>${esc(x)}</li>`).join('');
+  refresh();
+  $('result').scrollIntoView({behavior:'smooth'});
+}
+
+/* 입력 변경 시 전체 갱신 */
+document.addEventListener('input',e=>{ if(data && e.target.closest('#result')) refresh(); });
+document.addEventListener('change',e=>{ if(data && e.target.closest('#result')) refresh(); });
+
+function refresh(){
+  const m=$('meta').value; const len=[...m].length;
+  const mc=$('metaCount'); mc.textContent=`(${len}자)`; mc.style.color= len>=140&&len<=160?'var(--ok)':'var(--warn)';
+  $('tagView').innerHTML=$('tags').value.split(',').map(s=>s.trim()).filter(Boolean).map(t=>`<span>${esc(t)}</span>`).join('');
+  drawThumb().then(()=>{
+    const wp=buildWP(), full=buildFull(true);
+    $('wpOut').textContent=wp; $('fullOut').textContent=buildFull(false);
+    $('preview').srcdoc=full;
+    runChecks(full);
+  });
+}
+
+/* ---------- 본문 조립 ---------- */
+const CSS='.kpost{--a:#5b47ff;--bg:#f5f3ff;--bd:#e2ddf5;line-height:1.8;word-break:keep-all}.kpost h2{margin:2.2em 0 .7em;padding-bottom:.35em;border-bottom:2px solid var(--a);font-size:1.45em}.kpost h3{margin:1.6em 0 .5em;font-size:1.18em}.kpost .k-box{background:var(--bg);border-left:4px solid var(--a);padding:1em 1.2em;border-radius:6px;margin:1.2em 0;color:#1f2033}.kpost .k-box ul,.kpost .k-toc ol{margin:.4em 0 0;padding-left:1.2em}.kpost .k-toc{border:1px solid var(--bd);border-radius:6px;padding:1em 1.2em;margin:1.5em 0}.kpost table{width:100%;border-collapse:collapse;font-size:.95em;display:block;overflow-x:auto}.kpost caption{text-align:left;font-weight:700;margin-bottom:.4em}.kpost th,.kpost td{border:1px solid var(--bd);padding:.6em .7em;vertical-align:top}.kpost thead th{background:var(--bg);color:#1f2033}.kpost details{border:1px solid var(--bd);border-radius:6px;padding:.8em 1em;margin:.6em 0}.kpost summary{font-weight:700;cursor:pointer}.kpost .k-note{font-size:.88em;color:#5a6776;border-top:1px solid var(--bd);margin-top:2em;padding-top:1em}';
+
+function article(){
+  const toc=[...data.body_html.matchAll(/<h2[^>]*\sid="([^"]+)"[^>]*>([\s\S]*?)<\/h2>/gi)].map(m=>`<li><a href="#${m[1]}">${m[2].replace(/<[^>]+>/g,'')}</a></li>`);
+  toc.push('<li><a href="#faq">자주 묻는 질문</a></li>');
+  const faqHtml=data.faq.map(x=>`<details><summary>${esc(x.q)}</summary><p>${esc(x.a)}</p></details>`).join('');
+  const kw=$('focus').value.trim();
+  return `<div class="k-box" role="note" aria-label="핵심 요약"><strong>핵심 요약</strong><ul>${data.summary_points.map(s=>`<li>${esc(s)}</li>`).join('')}</ul></div>`+
+    `<nav class="k-toc" aria-label="목차"><strong>목차</strong><ol>${toc.join('')}</ol></nav>`+
+    data.body_html+
+    `<h2 id="faq">${esc(kw)} 자주 묻는 질문</h2>${faqHtml}`+
+    `<p class="k-note">본 글은 ${new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long'})} 기준 공개 정보를 정리한 정보 제공용 콘텐츠입니다. 세부 내용은 공식 자료를 함께 확인하세요.</p>`;
+}
+function faqLD(){
+  return {'@context':'https://schema.org','@type':'FAQPage',mainEntity:data.faq.map(x=>({'@type':'Question',name:x.q,acceptedAnswer:{'@type':'Answer',text:x.a}}))};
+}
+function oneLine(html){ return html.replace(/\r?\n\s*/g,' ').replace(/>\s+</g,'><').trim(); }
+function buildWP(){
+  return oneLine(`<style>${CSS}</style><article class="kpost">${article()}</article><script type="application/ld+json">${JSON.stringify(faqLD())}<\/script>`);
+}
+function buildFull(withImage){
+  const title=selTitle(), slug=$('slug').value.trim(), url=`${SITE.url}/${slug}/`, meta=$('meta').value.trim(), alt=$('thumbAlt').value.trim();
+  const img = withImage ? thumbData : `${SITE.url}/wp-content/uploads/${slug}.webp`;
+  return `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(title)} - ${esc(SITE.name)}</title>
+<meta name="description" content="${esc(meta)}">
+<link rel="canonical" href="${esc(url)}">
+<meta property="og:type" content="article">
+<meta property="og:title" content="${esc(title)}">
+<meta property="og:description" content="${esc(meta)}">
+<meta property="og:url" content="${esc(url)}">
+<meta property="og:image" content="${esc(withImage?`${SITE.url}/wp-content/uploads/${slug}.webp`:img)}">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<style>body{margin:0;padding:24px 16px;font-family:"Noto Sans KR",system-ui,sans-serif;color:#1f2033;background:#fff}article{max-width:760px;margin:0 auto}h1{font-size:1.9em;line-height:1.35}img{max-width:100%;height:auto;border-radius:8px}${CSS}</style>
+<script type="application/ld+json">${JSON.stringify(faqLD())}<\/script>
+</head>
+<body>
+<article class="kpost">
+<h1>${esc(title)}</h1>
+<img src="${esc(img)}" alt="${esc(alt)}" width="1200" height="630">
+${article()}
+</article>
+</body>
+</html>`;
+}
+
+/* ---------- SEO 점검 ---------- */
+function runChecks(html){
+  const doc=new DOMParser().parseFromString(html,'text/html');
+  const out=[]; const add=(st,t,d)=>out.push({st,t,d});
+  const titles=doc.querySelectorAll('title'), tt=titles[0]?.textContent.trim()||'';
+  add(tt?'ok':'bad','웹사이트 제목', tt?'웹사이트 제목을 작성하였습니다.':'title 태그가 비어 있습니다.');
+  add(titles.length===1?'ok':'bad','Title 태그 단일 사용', titles.length===1?'Title 태그가 1개로 올바르게 사용되었습니다.':`Title 태그가 ${titles.length}개입니다.`);
+  const md=doc.querySelector('meta[name=description]')?.content||''; const ml=[...md].length;
+  add(md? (ml>=140&&ml<=160?'ok':'warn'):'bad','웹사이트 설명', md? `웹사이트 설명을 작성하였습니다. (${ml}자${ml>=140&&ml<=160?'':' · 권장 140~160자'})`:'메타 설명이 없습니다.');
+  const h1=doc.querySelectorAll('h1');
+  add(h1.length?'ok':'bad','제목태그 H1', `총 ${h1.length}개 H1 제목태그를 작성하였습니다. H1 태그는 페이지 당 1개를 작성해야합니다.`);
+  add(h1.length===1?'ok':'bad','H1 태그 단일 사용', h1.length===1?'H1 태그가 1개로 올바르게 사용되었습니다.':`H1 태그가 ${h1.length}개입니다.`);
+  const h2=doc.querySelectorAll('h2').length;
+  add(h2?'ok':'bad','제목태그 H2', h2?`H2 제목태그를 작성하였습니다. (${h2}개)`:'H2 제목태그가 없습니다.');
+  let prev=0, skip=[]; doc.querySelectorAll('h1,h2,h3,h4,h5,h6').forEach(h=>{ const l=+h.tagName[1]; if(prev && l>prev+1) skip.push(`H${prev}→H${l} "${h.textContent.trim().slice(0,20)}"`); if(!prev && l!==1) skip.push('첫 제목이 H1이 아님'); prev=l; });
+  add(skip.length?'bad':'ok','제목 태그 계층 구조', skip.length? '레벨 건너뜀: '+skip.join(', ') : '올바른 순서: H1 → H2 → H3 → H4 (레벨을 건너뛰지 않았습니다)');
+  const imgs=[...doc.querySelectorAll('img')], noAlt=imgs.filter(i=>!i.getAttribute('alt')?.trim());
+  add(noAlt.length?'bad':'ok','이미지태그 Alt 설명속성', noAlt.length?`alt가 없는 이미지 ${noAlt.length}개`:`모든 이미지태그(${imgs.length}개)에 alt 설명속성이 설정되어 있습니다.`);
+  const kw=$('focus').value.trim(), text=doc.body.textContent;
+  if(kw){
+    const cnt=text.split(kw).length-1;
+    add(tt.includes(kw)?'ok':'warn','제목에 포커스 키워드', tt.includes(kw)?'제목에 포커스 키워드가 포함되어 있습니다.':'선택한 제목에 포커스 키워드가 없습니다.');
+    add(md.includes(kw)?'ok':'warn','메타 설명에 포커스 키워드', md.includes(kw)?'메타 설명에 포커스 키워드가 그대로 포함되어 있습니다.':'메타 설명에 포커스 키워드가 띄어쓰기까지 똑같이 들어가 있지 않습니다.');
+    add(cnt>=3?'ok':'warn','본문 키워드 사용', `본문에 포커스 키워드가 ${cnt}회 사용되었습니다.`);
+    const sl=$('slug').value; add(sl.includes(kw.toLowerCase().replace(/\s+/g,'-'))?'ok':'warn','슬러그에 포커스 키워드', sl? `슬러그: ${sl}`:'슬러그가 비어 있습니다.');
+  }
+  const chars=text.replace(/\s/g,'').length;
+  add(chars>=1500?'ok':'warn','본문 분량', `공백 제외 약 ${chars.toLocaleString()}자`);
+  const ld=[...doc.querySelectorAll('script[type="application/ld+json"]')].every(s=>{try{JSON.parse(s.textContent);return true}catch(e){return false}});
+  add(ld?'ok':'bad','구조화 데이터(FAQ)', ld?'FAQ 구조화 데이터가 올바른 JSON입니다.':'구조화 데이터 JSON 오류');
+  const ic={ok:'✓',warn:'!',bad:'✕'};
+  $('checks').innerHTML=out.map(o=>`<li class="${o.st}"><span class="ic">${ic[o.st]}</span><div><b>${o.t}</b>${esc(o.d)}</div></li>`).join('');
+}
+
+/* ---------- 썸네일 ---------- */
+let thumbData='';
+const THEMES={
+  violet:{bg:'#120d2e',g1:'rgba(124,92,255,.5)',g2:'rgba(0,200,255,.2)',a:'#a990ff',b:'#52d8ff',badge:'#ffcf3d'},
+  blue:{bg:'#0a1a33',g1:'rgba(66,133,244,.5)',g2:'rgba(52,168,83,.22)',a:'#6fb1ff',b:'#4ee0b0',badge:'#fbbc04'},
+  green:{bg:'#07261f',g1:'rgba(30,200,140,.45)',g2:'rgba(0,160,255,.2)',a:'#5ff0b5',b:'#9be15d',badge:'#ffd166'},
+  red:{bg:'#2a0d14',g1:'rgba(255,70,100,.45)',g2:'rgba(255,170,0,.2)',a:'#ff8aa0',b:'#ffb347',badge:'#ffffff'}
+};
+async function drawThumb(){
+  const c=$('thumb'), x=c.getContext('2d'), T=THEMES[$('tTheme').value];
+  try{ await document.fonts.load('900 80px "Noto Sans KR"'); await document.fonts.load('700 30px "Noto Sans KR"'); }catch(e){}
+  const F='"Noto Sans KR", sans-serif';
+  x.fillStyle=T.bg; x.fillRect(0,0,1200,630);
+  let g=x.createRadialGradient(980,280,0,980,280,600); g.addColorStop(0,T.g1); g.addColorStop(1,'rgba(0,0,0,0)'); x.fillStyle=g; x.fillRect(0,0,1200,630);
+  g=x.createRadialGradient(0,630,0,0,630,520); g.addColorStop(0,T.g2); g.addColorStop(1,'rgba(0,0,0,0)'); x.fillStyle=g; x.fillRect(0,0,1200,630);
+  x.strokeStyle='rgba(255,255,255,.05)'; x.lineWidth=1;
+  for(let i=0;i<=1200;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,630);x.stroke();}
+  for(let j=0;j<=630;j+=40){x.beginPath();x.moveTo(0,j);x.lineTo(1200,j);x.stroke();}
+  // 장식: 동심원 + 상승 그래프
+  x.lineWidth=5; x.strokeStyle=T.a; x.globalAlpha=.85;
+  [150,105,60].forEach((r,i)=>{x.beginPath();x.arc(1010,250,r,0,Math.PI*2);x.strokeStyle=i%2?T.b:T.a;x.stroke();});
+  x.globalAlpha=1; x.fillStyle=T.b; x.beginPath(); x.arc(1010,250,22,0,Math.PI*2); x.fill();
+  x.beginPath(); x.moveTo(820,560);[[880,535],[930,545],[990,500],[1040,510],[1100,455],[1160,420]].forEach(p=>x.lineTo(...p)); x.strokeStyle=T.b; x.lineWidth=6; x.lineJoin='round'; x.stroke();
+  // 배지
+  const badge=$('tBadge').value.trim();
+  x.font=`900 26px ${F}`; const bw=x.measureText(badge).width+40;
+  if(badge){ roundRect(x,70,60,bw,46,8); x.fillStyle=T.badge; x.fill(); x.fillStyle='#14102b'; x.textBaseline='middle'; x.fillText(badge,90,84); }
+  x.font=`700 24px ${F}`; x.fillStyle=T.a; x.fillText(SITE.name,70+(badge?bw+16:0),84);
+  // 큰 제목 (자동 줄바꿈·크기 맞춤)
+  const head=$('tHead').value.trim(); let size=96, lines;
+  do{ x.font=`900 ${size}px ${F}`; lines=wrap(x,head,700); size-=4; }while((lines.length>2 || lines.some(l=>x.measureText(l).width>700)) && size>48);
+  size+=4; x.font=`900 ${size}px ${F}`; x.textBaseline='alphabetic';
+  let y=150+size; const grad=x.createLinearGradient(70,0,770,0); grad.addColorStop(0,'#ffffff'); grad.addColorStop(1,T.a);
+  lines.forEach((l,i)=>{ x.fillStyle=i===0?grad:'#ffffff'; x.fillText(l,70,y); y+=size*1.12; });
+  // 부제
+  x.font=`700 36px ${F}`; x.fillStyle='#e8e6ff';
+  wrap(x,$('tSub').value.trim(),720).slice(0,2).forEach(l=>{ y+=8; x.fillText(l,70,y+10); y+=44; });
+  // 칩
+  let cx=70; const cy=Math.min(y+40,520); x.font=`700 22px ${F}`; x.textBaseline='middle';
+  $('tChips').value.split(',').map(s=>s.trim()).filter(Boolean).slice(0,4).forEach(t=>{
+    const s='#'+t.replace(/^#/,''), w=x.measureText(s).width+32; if(cx+w>800) return;
+    roundRect(x,cx,cy,w,42,21); x.fillStyle='rgba(255,255,255,.08)'; x.fill(); x.strokeStyle='rgba(255,255,255,.35)'; x.lineWidth=2; x.stroke();
+    x.fillStyle='#ffffff'; x.fillText(s,cx+16,cy+22); cx+=w+10;
+  });
+  x.textBaseline='alphabetic';
+  thumbData=c.toDataURL('image/webp',0.85);
+}
+function wrap(x,text,max){
+  const words=text.split(/\s+/); const lines=[]; let cur='';
+  words.forEach(w=>{ const t=cur?cur+' '+w:w; if(x.measureText(t).width>max && cur){ lines.push(cur); cur=w; } else cur=t; });
+  if(cur) lines.push(cur); return lines;
+}
+function roundRect(x,a,b,w,h,r){ x.beginPath(); x.moveTo(a+r,b); x.arcTo(a+w,b,a+w,b+h,r); x.arcTo(a+w,b+h,a,b+h,r); x.arcTo(a,b+h,a,b,r); x.arcTo(a,b,a+w,b,r); x.closePath(); }
+
+/* ---------- 다운로드·복사 ---------- */
+function download(url,name){ const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); }
+const fname=()=>($('slug').value.trim()||'thumbnail').replace(/[^\p{L}\p{N}-]/gu,'');
+$('dlWebp').addEventListener('click',()=>download($('thumb').toDataURL('image/webp',0.85),fname()+'.webp'));
+$('dlPng').addEventListener('click',()=>download($('thumb').toDataURL('image/png'),fname()+'.png'));
+$('dlHtml').addEventListener('click',()=>{ const u=URL.createObjectURL(new Blob([buildFull(false)],{type:'text/html'})); download(u,fname()+'.html'); setTimeout(()=>URL.revokeObjectURL(u),2000); });
+document.querySelectorAll('[data-copy]').forEach(b=>b.addEventListener('click',async()=>{
+  const el=$(b.dataset.copy); const v=el.value!==undefined&&el.tagName!=='PRE'?el.value:el.textContent;
+  try{ await navigator.clipboard.writeText(v); const o=b.textContent; b.textContent='복사됨 ✓'; setTimeout(()=>b.textContent=o,1500); }catch(e){ alert('복사 실패: 직접 선택해 복사하세요.'); }
+}));
+document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('[data-pane]').forEach(p=>p.classList.toggle('hidden',p.dataset.pane!==b.dataset.tab));
+}));
+})();
+</script>
+</body>
+</html>
