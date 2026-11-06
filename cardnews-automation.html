@@ -7,7 +7,7 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- html2canvas for PNG Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
     <!-- JSZip for Bulk Download -->
@@ -95,6 +95,11 @@
             transform: translateX(150%) scale(0.6);
             opacity: 0;
             pointer-events: none;
+        }
+
+        /* Readability on photo backgrounds */
+        .img-mode-text h3, .img-mode-text p {
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
         }
 
         /* Editable Text Styling */
@@ -191,6 +196,22 @@
                 </div>
             </div>
 
+            <!-- Category -->
+            <div class="space-y-1.5">
+                <label for="category-select" class="block text-xs font-semibold text-slate-300">카테고리 (문구 스타일)</label>
+                <select id="category-select" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500">
+                    <option value="">자동 (주제에 맞게)</option>
+                    <option value="humor">😂 웃긴 감성 / 유머</option>
+                    <option value="meme">🔥 짧고 강렬한 밈</option>
+                    <option value="quote">🌙 명언 / 감성</option>
+                    <option value="economy">💰 경제</option>
+                    <option value="society">📰 사회 / 이슈</option>
+                    <option value="science">⚡ 과학 / 지식</option>
+                    <option value="festival">🎡 축제 / 핫플레이스</option>
+                    <option value="wit">🤪 엉뚱한 한 줄</option>
+                </select>
+            </div>
+
             <!-- Card Count Slider (5 ~ 10) -->
             <div class="space-y-2 pt-2 border-t border-slate-800">
                 <div class="flex justify-between items-center text-xs">
@@ -260,6 +281,30 @@
                     <option value="'Black Han Sans', sans-serif">강렬한 헤드라인 (Black Han Sans)</option>
                     <option value="'Nanum Gothic', sans-serif">나눔고딕</option>
                 </select>
+            </div>
+
+            <!-- Branding & Disclaimer -->
+            <div class="space-y-2 pt-2 border-t border-slate-800">
+                <label class="block text-xs font-semibold text-slate-300">하단 브랜딩 (플랫폼 / 아이디)</label>
+                <div class="flex gap-2">
+                    <select id="platform-select" class="px-2 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-500">
+                        <option value="instagram">인스타그램</option>
+                        <option value="tiktok">틱톡</option>
+                        <option value="threads">쓰레드</option>
+                        <option value="none">아이콘 없음</option>
+                    </select>
+                    <input id="handle-input" type="text" value="@1318im 꿀템창고" class="flex-1 min-w-0 px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-rose-500">
+                </div>
+                <label class="flex items-center gap-2 text-[11px] text-slate-400 pt-1 cursor-pointer">
+                    <input type="checkbox" id="multi-platform-zip" checked class="accent-rose-500">
+                    ZIP 저장 시 인스타·틱톡·쓰레드용 3종 폴더로 한 번에 저장
+                </label>
+                <label class="flex items-center gap-2 text-[11px] text-slate-400 cursor-pointer">
+                    <input type="checkbox" id="disclaimer-toggle" class="accent-rose-500">
+                    마지막 카드에 면책 문구 표시 (경제·재테크 주제 권장)
+                </label>
+                <input id="disclaimer-input" type="text" value="※ 투자 권유가 아닌 정보 공유 목적이며, 투자 판단과 책임은 본인에게 있습니다." class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500">
+                <p class="text-[10px] text-slate-500">저장 크기: 1080×1350 (인스타·틱톡·쓰레드 공통 규격)</p>
             </div>
 
             <!-- Generate Button -->
@@ -334,6 +379,79 @@
                 <button id="next-card-btn" class="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center shadow-md transition border border-slate-700 active:scale-95">
                     <i class="fa-solid fa-chevron-right"></i>
                 </button>
+            </div>
+
+            <!-- Post Copy Panel -->
+            <div id="post-panel" class="w-full max-w-2xl bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-pen-nib text-rose-400"></i> 게시물 문구
+                    </h3>
+                    <button class="copy-btn px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold rounded-lg transition" data-copy="all">
+                        <i class="fa-regular fa-copy"></i> 전체 복사
+                    </button>
+                </div>
+
+                <div class="space-y-1">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="font-semibold text-slate-300">제목</span>
+                        <button class="copy-btn px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[11px] transition" data-copy="post-title"><i class="fa-regular fa-copy"></i> 복사</button>
+                    </div>
+                    <textarea id="post-title" rows="3" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-rose-500 resize-y" placeholder="번개 온도 약 3만 도&#10;태양 표면보다 5배 뜨겁다&#10;천둥은 공기가 터지는 소리"></textarea>
+                </div>
+
+                <div class="space-y-1">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="font-semibold text-slate-300">내용</span>
+                        <button class="copy-btn px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[11px] transition" data-copy="post-body"><i class="fa-regular fa-copy"></i> 복사</button>
+                    </div>
+                    <textarea id="post-body" rows="9" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-rose-500 resize-y" placeholder="⚡ 당신이 몰랐던 사실&#10;&#10;번개 한 줄기의 온도는 약 3만 도!&#10;태양 표면(약 6천 도)보다 5배나 뜨거워요 🔥&#10;&#10;저장해두고 친구한테 아는 척하기 👀"></textarea>
+                </div>
+
+                <div class="space-y-1">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="font-semibold text-slate-300">해시태그</span>
+                        <button class="copy-btn px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[11px] transition" data-copy="post-hashtags"><i class="fa-regular fa-copy"></i> 복사</button>
+                    </div>
+                    <input id="post-hashtags" type="text" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-sky-300 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-rose-500" placeholder="#과학상식 #몰랐던사실 #번개">
+                </div>
+
+                <p class="text-[11px] text-slate-500">전체 글자 수: <span id="post-count" class="font-mono text-slate-300">0</span>자 <span class="text-slate-600">(스레드 500자 제한)</span></p>
+            </div>
+
+            <!-- Comment Panel -->
+            <div id="comment-panel" class="w-full max-w-2xl bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-2">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i class="fa-regular fa-comment-dots text-amber-400"></i> 댓글 작성 (쿠팡 파트너스)
+                    </h3>
+                    <div class="flex items-center gap-2">
+                        <button id="comment-reset-btn" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded text-[11px] transition">기본값</button>
+                        <button class="copy-btn px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-900 text-xs font-semibold rounded-lg transition" data-copy="comment-text">
+                            <i class="fa-regular fa-copy"></i> 댓글 복사
+                        </button>
+                    </div>
+                </div>
+                <textarea id="comment-text" rows="14" class="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500 resize-y">📢 요즘 눈길이 가는 생활 꿀템!
+일상에서 유용하게 활용할 수 있는 상품을 소개합니다. 😊
+
+✔️ 상품의 주요 특징 확인하기
+✔️ 내 생활에 필요한 제품인지 비교하기
+✔️ 가격과 구매자 후기를 확인한 후 선택하기
+
+🛍️ 상품 구매 링크는 프로필에서 확인하세요!
+
+📌 이 게시물은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.
+
+https://link.coupang.com/a/h8IjME3Spg
+https://link.coupang.com/a/h8IjME3Spg
+https://link.coupang.com/a/h8IjME3Spg
+
+✅ 쿠팡 파트너스 링크는 Chrome에서 정상 작동
+✅ 스레드에서 ⋯ → 외부 브라우저에서 열기를 누르면 정상 작동
+
+#꿀템창고 #생활꿀템 #쇼핑추천 #쿠팡파트너스 #쇼핑쇼츠</textarea>
+                <p class="text-[11px] text-slate-500">수정한 내용은 이 브라우저에 자동 저장됩니다. 링크를 바꿀 때 여기서 고치세요.</p>
             </div>
 
         </section>
@@ -414,6 +532,97 @@
         let solidBgColor = "#0f172a";
         let fontStyle = "'Noto Sans KR', sans-serif";
 
+        let lastPost = null;
+
+        function setPostFields(post) {
+            if (!post) return;
+            document.getElementById('post-title').value = post.title;
+            document.getElementById('post-body').value = post.body;
+            document.getElementById('post-hashtags').value = post.hashtags;
+            updatePostCount();
+        }
+
+        function getFullPostText() {
+            const parts = [
+                document.getElementById('post-title').value.trim(),
+                document.getElementById('post-body').value.trim(),
+                document.getElementById('post-hashtags').value.trim()
+            ].filter(Boolean);
+            return parts.join('\n\n');
+        }
+
+        function updatePostCount() {
+            const n = Array.from(getFullPostText()).length;
+            const el = document.getElementById('post-count');
+            el.textContent = n;
+            el.className = `font-mono ${n > 500 ? 'text-rose-400' : 'text-slate-300'}`;
+        }
+
+        async function copyText(text) {
+            try {
+                await navigator.clipboard.writeText(text);
+                return true;
+            } catch (e) {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                let ok = false;
+                try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
+                ta.remove();
+                return ok;
+            }
+        }
+
+        // Branding / export settings
+        const EXPORT_W = 1080, EXPORT_H = 1350;
+        const PLATFORM_ICONS = { instagram: 'fa-instagram', tiktok: 'fa-tiktok', threads: 'fa-threads' };
+        const PLATFORM_LABELS = { instagram: '인스타그램', tiktok: '틱톡', threads: '쓰레드' };
+        let footerPlatform = 'instagram';
+        let handleText = '@1318im 꿀템창고';
+        let showDisclaimer = false;
+        let disclaimerText = '※ 투자 권유가 아닌 정보 공유 목적이며, 투자 판단과 책임은 본인에게 있습니다.';
+
+        function loadSettings() {
+            try {
+                const saved = JSON.parse(localStorage.getItem('cardnews-settings') || '{}');
+                if (saved.footerPlatform) footerPlatform = saved.footerPlatform;
+                if (typeof saved.handleText === 'string') handleText = saved.handleText;
+                if (typeof saved.showDisclaimer === 'boolean') showDisclaimer = saved.showDisclaimer;
+                if (typeof saved.disclaimerText === 'string') disclaimerText = saved.disclaimerText;
+            } catch (e) { /* storage unavailable */ }
+        }
+        function saveSettings() {
+            try {
+                localStorage.setItem('cardnews-settings', JSON.stringify({ footerPlatform, handleText, showDisclaimer, disclaimerText }));
+            } catch (e) { /* storage unavailable */ }
+        }
+        function footerIconHtml() {
+            const icon = PLATFORM_ICONS[footerPlatform];
+            return icon ? `<i class="fa-brands ${icon} text-sm"></i>` : '';
+        }
+
+        /**
+         * Crops the bottom of a generated image (removes the pollinations.ai mark) and returns a 4:5 JPEG data URI
+         */
+        function cropToCardRatio(dataUrl) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    const w = img.naturalWidth;
+                    const h = Math.min(img.naturalHeight, Math.round(w * 5 / 4));
+                    const c = document.createElement('canvas');
+                    c.width = w; c.height = h;
+                    c.getContext('2d').drawImage(img, 0, 0, w, h, 0, 0, w, h);
+                    resolve(c.toDataURL('image/jpeg', 0.92));
+                };
+                img.onerror = () => resolve(dataUrl);
+                img.src = dataUrl;
+            });
+        }
+
         /**
          * Fetches an image based on keyword and converts to Base64 data URI to prevent CORS issues with html2canvas export
          */
@@ -423,7 +632,7 @@
             
             // Generate seed for variety
             const randomSeed = Math.floor(Math.random() * 900000) + 100000;
-            const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptText)}?width=800&height=1000&nologo=true&seed=${randomSeed}`;
+            const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptText)}?width=864&height=1200&nologo=true&seed=${randomSeed}`;
             
             try {
                 // Fetch image blob
@@ -433,7 +642,7 @@
                 
                 return new Promise((resolve) => {
                     const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result);
+                    reader.onloadend = () => resolve(cropToCardRatio(reader.result));
                     reader.onerror = () => resolve(getFallbackImage(cleanKeyword));
                     reader.readAsDataURL(blob);
                 });
@@ -448,10 +657,21 @@
             return `https://picsum.photos/seed/${seed}/800/1000`;
         }
 
+        const CATEGORY_GUIDES = {
+            humor: '웃긴 감성/유머: 직장인·일상 공감 포인트, 친구를 태그하고 싶게 만드는 톤. CTA는 "공감되면 친구 태그".',
+            meme: '짧고 강렬한 밈: 요즘 유행어, 킹받는 짧은 문장. 문장은 최대한 짧게.',
+            quote: '명언/감성: 인간관계·동기부여·위로. 차분하고 따뜻한 톤. CTA는 저장 유도.',
+            economy: '경제: 초보자도 이해하는 짧은 재테크 팁/시황 요약. 과장·수익 보장·특정 종목 매수 권유 금지. 숫자는 정확하고 서로 모순 없게.',
+            society: '사회/이슈: 트렌디한 이슈를 중립적으로 요약. 확인되지 않은 내용, 특정 개인 비방 금지.',
+            science: '과학/지식: "당신이 몰랐던 사실" 스타일. 놀라운 수치·비교로 후킹하고, 정확한 사실만 사용. CTA는 "저장해두고 친구한테 아는 척하기".',
+            festival: '축제/핫플레이스: 이번 주말 가볼 만한 곳/축제 정보. 날짜·장소는 확실하지 않으면 "방문 전 공식 일정 확인"을 덧붙일 것.',
+            wit: '엉뚱한 한 줄: 자유롭고 위트 있는 상상력, 가벼운 반전.'
+        };
+
         /**
          * Calls Gemini API to generate structured card news with extracted image keywords
          */
-        async function generateCardsWithGemini(topic, cardCount) {
+        async function generateCardsWithGemini(topic, cardCount, category = '') {
             const systemPrompt = `You are an expert Instagram content creator and graphic designer.
 Your task is to generate a ${cardCount}-slide Instagram card news script based on the given topic.
 For EACH slide, you MUST extract a vivid, high-quality, 3 to 5-word English photographic search keyword ('imageKeyword') that serves as the perfect visual background for that slide.
@@ -461,7 +681,21 @@ Guidelines:
 - Middle Slides: Clear, single key take-aways with step-by-step guidance.
 - Last Slide: Call-To-Action (Save/Share/Follow) and summary.
 - 'imageKeyword' MUST be in English, describing realistic photography imagery (e.g. 'peaceful forest sunlight morning', 'stressed businessman laptop dark office', 'futuristic glowing brain technology', 'cozy cafe warm coffee table').
+- 'tag', 'title', 'body' MUST be written in natural Korean. Keep titles short (under 20 characters if possible).
+- Do NOT use exaggerated or unverifiable claims (e.g. "무조건", "100% 보장", "상위 10% 부자가 된다").
+- Keep every number consistent across slides: totals must add up, and any limits or conditions must not contradict each other.
+- For finance/investment topics, present information neutrally and do not recommend specific stocks as must-buys.
 - 'icon' MUST be a valid FontAwesome class icon name without 'fa-' prefix, e.g. 'fire', 'bolt', 'lightbulb', 'gem', 'chart-line', 'bookmark', 'rocket', 'brain', 'shield'.
+${category && CATEGORY_GUIDES[category] ? `\nCategory style (apply to slides AND post copy): ${CATEGORY_GUIDES[category]}\n` : ''}
+Also write the SNS post copy (Korean) for Threads/Instagram/TikTok:
+- 'postTitle': exactly 3 short punchy lines separated by "\n" (each line under ~18 characters, no emojis, no hashtags). Line 1 = the most surprising fact or number.
+- 'postBody': starts with an emoji label line (e.g. "⚡ 당신이 몰랐던 사실"), then a blank line, then 2-3 short paragraphs separated by blank lines, using a few fitting emojis, then a blank line and a one-line CTA. Friendly 해요체. Max 350 characters.
+- 'hashtags': 3 to 5 Korean hashtags, each starting with "#", no spaces inside a tag.
+
+Example of the post copy style:
+postTitle: "번개 온도 약 3만 도\n태양 표면보다 5배 뜨겁다\n천둥은 공기가 터지는 소리"
+postBody: "⚡ 당신이 몰랐던 사실\n\n번개 한 줄기의 온도는 약 3만 도!\n태양 표면(약 6천 도)보다 5배나 뜨거워요 🔥\n\n그래서 번개가 지나간 공기는 순간적으로 팽창하고,\n그 폭발음이 바로 '천둥'이랍니다 🌩️\n\n저장해두고 친구한테 아는 척하기 👀"
+hashtags: ["#과학상식", "#몰랐던사실", "#번개"]
 `;
 
             const userPrompt = `주제: "${topic}"\n카드 개수: ${cardCount}장\n인스타그램 피드에 최적화된 카드뉴스 내용과 슬라이드별 영어 이미지 배경 키워드를 생성해줘.`;
@@ -487,9 +721,12 @@ Guidelines:
                                     },
                                     required: ["tag", "title", "body", "icon", "imageKeyword"]
                                 }
-                            }
+                            },
+                            postTitle: { type: "STRING" },
+                            postBody: { type: "STRING" },
+                            hashtags: { type: "ARRAY", items: { type: "STRING" } }
                         },
-                        required: ["slides"]
+                        required: ["slides", "postTitle", "postBody", "hashtags"]
                     }
                 }
             };
@@ -514,6 +751,14 @@ Guidelines:
                     
                     const parsed = JSON.parse(jsonText);
                     if (parsed && parsed.slides && Array.isArray(parsed.slides)) {
+                        lastPost = {
+                            title: parsed.postTitle || '',
+                            body: parsed.postBody || '',
+                            hashtags: (parsed.hashtags || []).map(t => {
+                                const tag = String(t).trim().replace(/\s+/g, '');
+                                return tag.startsWith('#') ? tag : `#${tag}`;
+                            }).filter(t => t.length > 1).join(' ')
+                        };
                         return parsed.slides.map(slide => ({
                             tag: slide.tag || "INSIGHT",
                             title: slide.title || topic,
@@ -561,6 +806,7 @@ Guidelines:
                 if (isImageBgMode && bgImg) {
                     cardElem.style.backgroundImage = `linear-gradient(rgba(15, 23, 42, ${overlayOpacity}), rgba(15, 23, 42, ${overlayOpacity})), url('${bgImg}')`;
                     cardElem.style.backgroundColor = solidBgColor;
+                    cardElem.classList.add('img-mode-text');
                 } else {
                     cardElem.style.backgroundImage = 'none';
                     cardElem.style.backgroundColor = solidBgColor;
@@ -600,11 +846,13 @@ Guidelines:
                         <p class="editable-field text-xs sm:text-sm font-normal leading-relaxed break-keep max-w-xs whitespace-pre-line ${subTextColor}" contenteditable="true" data-field="body" data-index="${index}">${escapeHtml(card.body)}</p>
                     </div>
 
+                    ${(showDisclaimer && disclaimerText && index === cards.length - 1) ? `<p class="text-[9px] leading-snug opacity-75 text-center pb-2 z-10 break-keep ${subTextColor}">${escapeHtml(disclaimerText)}</p>` : ''}
+
                     <!-- Bottom Footer -->
                     <div class="pt-3 border-t border-current/15 flex items-center justify-between text-[11px] opacity-75 font-medium z-10">
                         <div class="flex items-center space-x-1.5">
-                            <i class="fa-brands fa-instagram text-sm"></i>
-                            <span>@1318im 꿀템창고</span>
+                            ${footerIconHtml()}
+                            <span>${escapeHtml(handleText)}</span>
                         </div>
                         <span>➔</span>
                     </div>
@@ -665,6 +913,31 @@ Guidelines:
         /**
          * Load or refresh background images for all cards using keywords
          */
+        async function captureCardExact(cardElem) {
+            const keys = ['transform', 'opacity', 'filter', 'transition', 'borderRadius', 'borderWidth', 'boxShadow'];
+            const saved = {};
+            keys.forEach(k => saved[k] = cardElem.style[k]);
+            cardElem.style.transition = 'none';
+            cardElem.style.transform = 'none';
+            cardElem.style.opacity = '1';
+            cardElem.style.filter = 'none';
+            cardElem.style.borderRadius = '0';
+            cardElem.style.borderWidth = '0';
+            cardElem.style.boxShadow = 'none';
+            void cardElem.offsetWidth; // force reflow
+            try {
+                const scale = EXPORT_W / cardElem.offsetWidth;
+                const raw = await html2canvas(cardElem, { scale, useCORS: true, allowTaint: true, backgroundColor: solidBgColor });
+                const out = document.createElement('canvas');
+                out.width = EXPORT_W;
+                out.height = EXPORT_H;
+                out.getContext('2d').drawImage(raw, 0, 0, EXPORT_W, EXPORT_H);
+                return out;
+            } finally {
+                keys.forEach(k => cardElem.style[k] = saved[k]);
+            }
+        }
+
         async function loadImagesForCards(showProgress = false) {
             const btnText = document.getElementById('generate-btn-text');
             
@@ -683,6 +956,63 @@ Guidelines:
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+
+            // Branding & disclaimer controls
+            loadSettings();
+            const platformSelect = document.getElementById('platform-select');
+            const handleInput = document.getElementById('handle-input');
+            const disclaimerToggle = document.getElementById('disclaimer-toggle');
+            const disclaimerInput = document.getElementById('disclaimer-input');
+            platformSelect.value = footerPlatform;
+            handleInput.value = handleText;
+            disclaimerToggle.checked = showDisclaimer;
+            disclaimerInput.value = disclaimerText;
+            platformSelect.addEventListener('change', (e) => { footerPlatform = e.target.value; saveSettings(); renderCarousel(); });
+            handleInput.addEventListener('input', (e) => { handleText = e.target.value; saveSettings(); renderCarousel(); });
+            disclaimerToggle.addEventListener('change', (e) => { showDisclaimer = e.target.checked; saveSettings(); renderCarousel(); });
+            disclaimerInput.addEventListener('input', (e) => { disclaimerText = e.target.value; saveSettings(); renderCarousel(); });
+
+            // Post copy & comment panel
+            ['post-title', 'post-body', 'post-hashtags'].forEach(id => {
+                document.getElementById(id).addEventListener('input', updatePostCount);
+            });
+            updatePostCount();
+
+            const commentBox = document.getElementById('comment-text');
+            const commentDefault = commentBox.defaultValue;
+            try {
+                const savedComment = localStorage.getItem('cardnews-comment');
+                if (savedComment) commentBox.value = savedComment;
+            } catch (e) { /* storage unavailable */ }
+            commentBox.addEventListener('input', () => {
+                try { localStorage.setItem('cardnews-comment', commentBox.value); } catch (e) { /* storage unavailable */ }
+            });
+            document.getElementById('comment-reset-btn').addEventListener('click', () => {
+                commentBox.value = commentDefault;
+                try { localStorage.removeItem('cardnews-comment'); } catch (e) { /* storage unavailable */ }
+            });
+
+            document.querySelectorAll('.copy-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const target = btn.getAttribute('data-copy');
+                    const text = target === 'all' ? getFullPostText() : document.getElementById(target).value;
+                    if (!text.trim()) return;
+                    const ok = await copyText(text);
+                    const orig = btn.innerHTML;
+                    btn.innerHTML = ok ? '<i class="fa-solid fa-check"></i> 복사됨' : '복사 실패';
+                    setTimeout(() => { btn.innerHTML = orig; }, 1500);
+                });
+            });
+
+            // Economy category turns the disclaimer on automatically
+            document.getElementById('category-select').addEventListener('change', (e) => {
+                if (e.target.value === 'economy' && !showDisclaimer) {
+                    showDisclaimer = true;
+                    document.getElementById('disclaimer-toggle').checked = true;
+                    saveSettings();
+                    renderCarousel();
+                }
+            });
 
             // Initialize image URLs for default cards
             loadImagesForCards();
@@ -804,8 +1134,10 @@ Guidelines:
                 btnText.textContent = "AI 문구 및 키워드 기획 중...";
 
                 try {
-                    const generatedSlides = await generateCardsWithGemini(topic, count);
+                    const category = document.getElementById('category-select').value;
+                    const generatedSlides = await generateCardsWithGemini(topic, count, category);
                     cards = generatedSlides;
+                    setPostFields(lastPost);
                     activeIndex = 0;
 
                     // Fetch background images for cards
@@ -839,16 +1171,10 @@ Guidelines:
                 if (!activeCardElem) return;
 
                 try {
-                    const canvas = await html2canvas(activeCardElem, {
-                        scale: 3, // High quality 4:5 export
-                        useCORS: true,
-                        allowTaint: true,
-                        backgroundColor: null
-                    });
-                    
+                    const canvas = await captureCardExact(activeCardElem);
                     const image = canvas.toDataURL("image/png");
                     const link = document.createElement('a');
-                    link.download = `instacard_${activeIndex + 1}.png`;
+                    link.download = `card_${footerPlatform}_${activeIndex + 1}.png`;
                     link.href = image;
                     link.click();
                 } catch (err) {
@@ -865,40 +1191,41 @@ Guidelines:
                 }
 
                 const zip = new JSZip();
-                const folder = zip.folder("instacards");
+                const multi = document.getElementById('multi-platform-zip').checked;
+                const platforms = multi ? ['instagram', 'tiktok', 'threads'] : [footerPlatform];
+                const originalPlatform = footerPlatform;
+                const zipBtn = document.getElementById('download-all-btn');
+                const zipBtnHtml = zipBtn.innerHTML;
+                zipBtn.disabled = true;
 
-                // Temporary view render container
-                const stage = document.getElementById('carousel-stage');
-
-                for (let i = 0; i < cards.length; i++) {
-                    const cardElem = document.getElementById(`card-elem-${i}`);
-                    if (!cardElem) continue;
-
-                    // Temporarily bring card into visible active state for clean html2canvas capture
-                    const origTransform = cardElem.style.transform;
-                    const origOpacity = cardElem.style.opacity;
-                    cardElem.style.transform = 'none';
-                    cardElem.style.opacity = '1';
-
-                    try {
-                        const canvas = await html2canvas(cardElem, {
-                            scale: 3,
-                            useCORS: true,
-                            allowTaint: true
-                        });
-                        const dataUrl = canvas.toDataURL("image/png");
-                        const base64Data = dataUrl.replace(/^data:image\/(png|jpg);base64,/, "");
-                        folder.file(`card_${i + 1}.png`, base64Data, { base64: true });
-                    } catch (err) {
-                        console.error(`Error rendering card ${i + 1}`, err);
-                    } finally {
-                        cardElem.style.transform = origTransform;
-                        cardElem.style.opacity = origOpacity;
+                try {
+                    for (const p of platforms) {
+                        footerPlatform = p;
+                        renderCarousel();
+                        const folder = zip.folder(multi ? p : 'cards');
+                        for (let i = 0; i < cards.length; i++) {
+                            zipBtn.innerHTML = `<div class="spinner"></div><span>${PLATFORM_LABELS[p] || ''} ${i + 1}/${cards.length}</span>`;
+                            const cardElem = document.getElementById(`card-elem-${i}`);
+                            if (!cardElem) continue;
+                            try {
+                                const canvas = await captureCardExact(cardElem);
+                                const base64Data = canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, "");
+                                folder.file(`card_${String(i + 1).padStart(2, '0')}.png`, base64Data, { base64: true });
+                            } catch (err) {
+                                console.error(`Error rendering card ${i + 1}`, err);
+                            }
+                        }
                     }
+                } finally {
+                    footerPlatform = originalPlatform;
+                    renderCarousel();
+                    zipBtn.disabled = false;
+                    zipBtn.innerHTML = zipBtnHtml;
                 }
 
+                const stamp = new Date().toISOString().slice(0, 10);
                 zip.generateAsync({ type: "blob" }).then((content) => {
-                    saveAs(content, "instacards_bundle.zip");
+                    saveAs(content, `cardnews_${stamp}.zip`);
                 });
             };
 
@@ -937,7 +1264,7 @@ Guidelines:
                             <p class="text-[11px] opacity-80 line-clamp-3">${escapeHtml(card.body)}</p>
                         </div>
                         <div class="pt-2 border-t border-current/15 text-[10px] opacity-60 flex justify-between">
-                            <span>@1318im 꿀템창고</span>
+                            <span>${escapeHtml(handleText)}</span>
                             <span>#${card.imageKeyword || 'bg'}</span>
                         </div>
                     `;
