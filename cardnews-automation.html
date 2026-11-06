@@ -102,6 +102,15 @@
             text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
         }
 
+        /* Tag badge: fixed height + flex centering so the PNG export keeps text vertically centered */
+        .editable-field.badge-pill {
+            display: inline-flex;
+            align-items: center;
+            height: 28px;
+            line-height: 1;
+            padding: 0 12px;
+        }
+
         /* Editable Text Styling */
         .editable-field {
             transition: background 0.2s, outline 0.2s;
@@ -825,7 +834,7 @@ hashtags: ["#과학상식", "#몰랐던사실", "#번개"]
                 cardElem.innerHTML = `
                     <!-- Top Header Bar -->
                     <div class="flex items-center justify-between text-xs font-semibold border-b border-current/15 pb-3 z-10">
-                        <span class="editable-field px-2.5 py-1 rounded-full ${badgeBg} text-[11px] font-bold tracking-wider uppercase" contenteditable="true" data-field="tag" data-index="${index}">${escapeHtml(card.tag)}</span>
+                        <span class="editable-field badge-pill rounded-full ${badgeBg} text-[11px] font-bold tracking-wider uppercase" contenteditable="true" data-field="tag" data-index="${index}">${escapeHtml(card.tag)}</span>
                         <span class="font-mono text-xs opacity-70">${index + 1} / ${cards.length}</span>
                     </div>
 
@@ -927,7 +936,13 @@ hashtags: ["#과학상식", "#몰랐던사실", "#번개"]
             void cardElem.offsetWidth; // force reflow
             try {
                 const scale = EXPORT_W / cardElem.offsetWidth;
-                const raw = await html2canvas(cardElem, { scale, useCORS: true, allowTaint: true, backgroundColor: solidBgColor });
+                const raw = await html2canvas(cardElem, {
+                    scale, useCORS: true, allowTaint: true, backgroundColor: solidBgColor,
+                    // html2canvas draws badge text a few px low; lift it in the export copy only
+                    onclone: (doc) => {
+                        doc.querySelectorAll('.badge-pill').forEach(el => { el.style.paddingBottom = '14px'; });
+                    }
+                });
                 const out = document.createElement('canvas');
                 out.width = EXPORT_W;
                 out.height = EXPORT_H;
