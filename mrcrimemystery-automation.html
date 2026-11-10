@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mr. Crime Mystery - 미스터리 롱폼·쇼츠 제너레이터</title>
+<title>Mr. Crime Mystery - 미스터리 롱폼·쇼츠 제너레이터 @mrcrimemystery</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -43,8 +43,8 @@ body{background:#0b0f1a;color:#f1f5f9;font-family:'Noto Sans KR',sans-serif}
   <div class="grid md:grid-cols-2 gap-3">
     <div><label class="lbl">Gemini API 키 (대본·분석용, 필수)</label><input id="gkey" type="password" class="inp" placeholder="AIza..."></div>
     <div><label class="lbl">Gemini 모델</label><input id="gmodel" class="inp" value="gemini-3-flash-preview"></div>
-    <div><label class="lbl">ElevenLabs API 키 (음성용, 선택)</label><input id="ekey" type="password" class="inp" placeholder="없으면 음성 없이 자막 영상으로 만들어집니다"></div>
-    <div class="grid grid-cols-2 gap-2">
+    <div class="hidden"><label class="lbl">ElevenLabs API 키 (음성용, 선택)</label><input id="ekey" type="password" class="inp" placeholder="없으면 음성 없이 자막 영상으로 만들어집니다"></div>
+    <div class="hidden">
       <div><label class="lbl">Voice ID</label><input id="evoice" class="inp" placeholder="ElevenLabs 목소리 ID"></div>
       <div><label class="lbl">음성 모델</label><select id="emodel" class="inp"><option value="eleven_multilingual_v2">multilingual v2</option><option value="eleven_v3">v3 (감정 태그)</option><option value="eleven_turbo_v2_5">turbo v2.5</option></select></div>
     </div>
@@ -80,7 +80,6 @@ body{background:#0b0f1a;color:#f1f5f9;font-family:'Noto Sans KR',sans-serif}
     <div class="h2 !mb-0">🖼️ 4. 롱폼 장면 <span id="longInfo" class="note"></span></div>
     <div class="flex flex-wrap gap-2">
       <button class="btn btn-sub" onclick="genImages('long')">이미지 전체 생성</button>
-      <button class="btn btn-sub" onclick="genAudio('long')">음성 전체 생성</button>
       <button class="btn btn-sub" onclick="copyNarr('long',this)">📋 나레이션 복사</button>
       <label class="btn btn-sub">🎧 오디오 파일 선택<input type="file" accept="audio/*" class="hidden" onchange="loadTrack('long',this)"></label>
       <button class="btn btn-sub" onclick="clearTrack('long')">오디오 해제</button>
@@ -95,7 +94,6 @@ body{background:#0b0f1a;color:#f1f5f9;font-family:'Noto Sans KR',sans-serif}
     <div class="h2 !mb-0">📱 5. 쇼츠 장면 <span id="shortInfo" class="note"></span></div>
     <div class="flex flex-wrap gap-2">
       <button class="btn btn-sub" onclick="genImages('short')">이미지 전체 생성</button>
-      <button class="btn btn-sub" onclick="genAudio('short')">음성 전체 생성</button>
       <button class="btn btn-sub" onclick="copyNarr('short',this)">📋 나레이션 복사</button>
       <label class="btn btn-sub">🎧 오디오 파일 선택<input type="file" accept="audio/*" class="hidden" onchange="loadTrack('short',this)"></label>
       <button class="btn btn-sub" onclick="clearTrack('short')">오디오 해제</button>
@@ -111,6 +109,10 @@ body{background:#0b0f1a;color:#f1f5f9;font-family:'Noto Sans KR',sans-serif}
     <button class="btn btn-main" onclick="renderVideo('long')">롱폼 영상 만들기 (1280×720)</button>
     <button class="btn btn-main" onclick="renderVideo('short')">쇼츠 영상 만들기 (720×1280)</button>
     <button class="btn btn-sub" onclick="downloadZip()">편집용 ZIP (이미지·음성·자막·대본)</button>
+  </div>
+  <div class="flex flex-wrap items-center gap-3 mb-3 note">
+    <label>저장 형식 <select id="vfmt" class="inp !w-auto !py-1"><option value="auto">자동 (mp4 우선)</option><option value="webm">webm</option></select></label>
+    <label><input id="vmon" type="checkbox" checked> 녹화 중 소리 듣기</label>
   </div>
   <div class="bar mb-2"><i id="renBar"></i></div><div id="renMsg" class="note mb-2"></div>
   <canvas id="cv" class="w-full max-w-xl rounded-lg border border-slate-700 hidden"></canvas>
@@ -232,7 +234,7 @@ function renderAll(){
       <div><label class="lbl">설명란</label><textarea id="descBox" class="inp" rows="7">${esc(m.description)}</textarea><button class="btn btn-sub mt-1" onclick="copy($('descBox').value,this)">설명 복사</button></div>
     </div>
     <div class="note mt-3">
-      ⏱ 예상 길이 <b class="${T>=need?'text-emerald-400':'text-rose-400'}">${fmt(T)}</b> ${T>=need?'(목표 달성)':`(목표 ${fmt(need)}보다 짧습니다. 음성을 만든 뒤 다시 확인하고, 모자라면 장면을 늘리세요)`} · 중간 광고 추천 위치: ${midrolls().join(', ')||'-'} · 음성 글자 수 약 ${chars.toLocaleString()}자(ElevenLabs 과금 기준)<br>
+      ⏱ 예상 길이 <b class="${T>=need?'text-emerald-400':'text-rose-400'}">${fmt(T)}</b> ${T>=need?'(목표 달성)':`(목표 ${fmt(need)}보다 짧습니다. 오디오가 짧으면 대본을 늘려 다시 만드세요)`} · 중간 광고 추천 위치: ${midrolls().join(', ')||'-'} · 나레이션 글자 수 약 ${chars.toLocaleString()}자<br>
       ✅ 업로드 순서: ① 롱폼 업로드 ② 쇼츠 업로드 ③ 유튜브 스튜디오 → 쇼츠 세부정보 → '관련 동영상'에 롱폼 지정 ④ '변경되거나 합성된 콘텐츠' 항목에 AI 사용 표시
     </div>`;
   drawList('long');drawList('short');
@@ -251,8 +253,6 @@ function drawList(k){
           <input class="inp mt-1" value="${esc(s.kw)}" onchange="S.${k}[${i}].kw=this.value;persist()">
           <div class="flex flex-wrap gap-1 mt-1">
             <button class="btn btn-sub !py-1 !px-2 !text-xs" onclick="oneImage('${k}',${i})">이미지</button>
-            <button class="btn btn-sub !py-1 !px-2 !text-xs" onclick="oneAudio('${k}',${i})">음성</button>
-            <button class="btn btn-sub !py-1 !px-2 !text-xs" onclick="playOne('${k}',${i})">듣기</button>
           </div>
         </div>
       </div>
@@ -329,7 +329,7 @@ function drawFrame(ctx,W,H,s,i,p,v){
   const lines=wrap(ctx,cur||'',W*(v?.86:.84)),lh=fs*1.35,y0=(v?H*.72:H-70)-(lines.length-1)*lh*(v?.5:1);
   lines.forEach((ln,j)=>{const y=y0+j*lh;ctx.lineWidth=8;ctx.strokeStyle='rgba(0,0,0,.9)';ctx.strokeText(ln,W/2,y);ctx.fillStyle='#fff';ctx.fillText(ln,W/2,y)});
 }
-function pickMime(){for(const m of['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'])if(window.MediaRecorder&&MediaRecorder.isTypeSupported(m))return m;return''}
+function pickMime(){const all=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];for(const m of($('vfmt').value==='webm'?all.slice(1):all))if(window.MediaRecorder&&MediaRecorder.isTypeSupported(m))return m;return''}
 let rendering=false;
 async function renderVideo(k){
   if(rendering)return;const list=S[k];if(!list.length)return alert('먼저 대본을 만드세요.');
@@ -348,9 +348,9 @@ async function renderVideo(k){
     rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);
     const done=new Promise(r=>rec.onstop=r);
     const t0=a.currentTime+0.25;
-    const trk=S.track[k];
-    if(trk){const src=a.createBufferSource();src.buffer=trk.buf;src.connect(dest);src.start(t0)}
-    else list.forEach((s,i)=>{if(s.audBuf){const src=a.createBufferSource();src.buffer=s.audBuf;src.connect(dest);src.start(t0+starts[i]+0.2)}});
+    const trk=S.track[k],mix=a.createGain();mix.connect(dest);if($('vmon').checked)mix.connect(a.destination);
+    if(trk){const src=a.createBufferSource();src.buffer=trk.buf;src.connect(mix);src.start(t0)}
+    else list.forEach((s,i)=>{if(s.audBuf){const src=a.createBufferSource();src.buffer=s.audBuf;src.connect(mix);src.start(t0+starts[i]+0.2)}});
     drawFrame(ctx,W,H,list[0],0,0,k==='short');rec.start(1000);
     await new Promise(res=>{(function loop(){
       const now=a.currentTime-t0;if(now>=T)return res();
