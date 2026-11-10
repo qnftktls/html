@@ -81,9 +81,12 @@ body{background:#0b0f1a;color:#f1f5f9;font-family:'Noto Sans KR',sans-serif}
     <div class="flex flex-wrap gap-2">
       <button class="btn btn-sub" onclick="genImages('long')">이미지 전체 생성</button>
       <button class="btn btn-sub" onclick="genAudio('long')">음성 전체 생성</button>
+      <button class="btn btn-sub" onclick="copyNarr('long',this)">📋 나레이션 복사</button>
+      <label class="btn btn-sub">🎧 오디오 파일 선택<input type="file" accept="audio/*" class="hidden" onchange="loadTrack('long',this)"></label>
+      <button class="btn btn-sub" onclick="clearTrack('long')">오디오 해제</button>
     </div>
   </div>
-  <div class="bar mb-2"><i id="longBar"></i></div><div id="longMsg" class="note mb-3"></div>
+  <div class="bar mb-2"><i id="longBar"></i></div><div id="longMsg" class="note mb-1"></div><div id="longTrk" class="note mb-3"></div>
   <div id="longList" class="grid md:grid-cols-2 gap-3"></div>
 </div>
 
@@ -93,9 +96,12 @@ body{background:#0b0f1a;color:#f1f5f9;font-family:'Noto Sans KR',sans-serif}
     <div class="flex flex-wrap gap-2">
       <button class="btn btn-sub" onclick="genImages('short')">이미지 전체 생성</button>
       <button class="btn btn-sub" onclick="genAudio('short')">음성 전체 생성</button>
+      <button class="btn btn-sub" onclick="copyNarr('short',this)">📋 나레이션 복사</button>
+      <label class="btn btn-sub">🎧 오디오 파일 선택<input type="file" accept="audio/*" class="hidden" onchange="loadTrack('short',this)"></label>
+      <button class="btn btn-sub" onclick="clearTrack('short')">오디오 해제</button>
     </div>
   </div>
-  <div class="bar mb-2"><i id="shortBar"></i></div><div id="shortMsg" class="note mb-3"></div>
+  <div class="bar mb-2"><i id="shortBar"></i></div><div id="shortMsg" class="note mb-1"></div><div id="shortTrk" class="note mb-3"></div>
   <div id="shortList" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
 </div>
 
@@ -119,7 +125,7 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const pad=n=>String(n).padStart(2,'0');
-const S={meta:null,long:[],short:[]};
+const S={meta:null,long:[],short:[],track:{long:null,short:null}};
 const CFG_KEY='mcm-settings',PRJ_KEY='mcm-project';
 const DIM={long:{w:1280,h:720},short:{w:720,h:1280}};
 
@@ -190,7 +196,7 @@ $('btnGen').onclick=async()=>{
     try{d=await callGemini(parts,!!url)}
     catch(e){if(url&&e.status===400){d=await callGemini(parts,false)}else throw e}
     S.meta=d;
-    S.long=(d.scenes||[]).map(mk);S.short=(d.shorts?.scenes||[]).map(mk);
+    S.long=(d.scenes||[]).map(mk);S.short=(d.shorts?.scenes||[]).map(mk);S.track={long:null,short:null};
     persist();renderAll();
     msg('genMsg',`완료: 롱폼 ${S.long.length}장면, 쇼츠 ${S.short.length}장면`+(S.long.length!==n?` (요청 ${n}장면과 다릅니다. 부족하면 다시 생성하세요)`:''));
   }catch(e){
@@ -204,7 +210,11 @@ function persist(){try{localStorage.setItem(PRJ_KEY,JSON.stringify({meta:S.meta,
 function restore(){try{const p=JSON.parse(localStorage.getItem(PRJ_KEY)||'null');if(p&&p.meta){S.meta=p.meta;S.long=p.long.map(s=>mk({narration:s.text,image_prompt:s.kw}));S.short=p.short.map(s=>mk({narration:s.text,image_prompt:s.kw}));renderAll();msg('genMsg','지난 작업의 대본을 불러왔습니다(이미지·음성은 다시 생성해야 합니다).')}}catch(e){}}
 
 /* ---------- UI ---------- */
-function dur(s){return s.audBuf?s.audBuf.duration+0.5:+$('tsec').value}
+function dur(s){return s.td!=null?s.td:(s.audBuf?s.audBuf.duration+0.5:+$('tsec').value)}
+function retime(k){const tr=S.track[k],list=S[k];if(!tr){list.forEach(s=>s.td=null);return}const tot=list.reduce((a,s)=>a+Math.max(1,s.text.length),0);list.forEach(s=>s.td=tr.buf.duration*Math.max(1,s.text.length)/tot);if(list.length)list[list.length-1].td+=0.6}
+function copyNarr(k,b){if(!S[k].length)return alert('먼저 대본을 만드세요.');copy(S[k].map(s=>s.text.trim()).join('\n\n'),b)}
+async function loadTrack(k,inp){const f=inp.files[0];inp.value='';if(!f)return;if(!S[k].length)return alert('먼저 대본을 만드세요.');try{const buf=await ac().decodeAudioData(await f.arrayBuffer());S.track[k]={buf,blob:f,name:f.name};retime(k);renderAll()}catch(e){alert('오디오 파일을 읽지 못했습니다: '+e.message)}}
+function clearTrack(k){S.track[k]=null;retime(k);renderAll()}
 function total(list){return list.reduce((a,s)=>a+dur(s),0)}
 function fmt(t){t=Math.round(t);return Math.floor(t/60)+':'+pad(t%60)}
 function midrolls(){const T=total(S.long);let acc=0,out=[];const targets=[T/3,T*2/3];S.long.forEach(s=>{const nx=acc+dur(s);targets.forEach((g,i)=>{if(acc<g&&nx>=g&&!out[i])out[i]=fmt(nx)});acc=nx});return out.filter(Boolean)}
@@ -230,13 +240,14 @@ function renderAll(){
 function drawList(k){
   const list=S[k],v=k==='short';
   $(k+'Info').textContent=`${list.length}장면 · 약 ${fmt(total(list))}`;
+  const tr=S.track[k];$(k+'Trk').innerHTML=tr?`🎧 <b class="text-emerald-400">${esc(tr.name)}</b> (${fmt(tr.buf.duration)}) 사용 중 — 장면 길이를 글자 수 비율로 나눴습니다. 문구를 고치면 오디오도 다시 만들어 선택하세요.`:'ElevenLabs 사이트에서 직접 만들 때: 나레이션 복사 → elevenlabs.io에 붙여넣어 생성·다운로드 → 오디오 파일 선택';
   $(k+'List').innerHTML=list.map((s,i)=>`
     <div class="scene">
       <div class="${v?'':'flex gap-3'}">
         <img id="${k}img${i}" class="thumb ${v?'v mb-2':''}" style="${v?'':'width:42%'}" ${s.img?`src="${s.img}"`:''} alt="">
         <div class="flex-1 min-w-0">
           <div class="note mb-1">#${i+1} <span id="${k}d${i}">${dur(s).toFixed(1)}초${s.audBuf?' 🔊':''}</span></div>
-          <textarea class="inp" rows="${v?3:3}" onchange="S.${k}[${i}].text=this.value;S.${k}[${i}].audBuf=null;S.${k}[${i}].audBlob=null;persist()">${esc(s.text)}</textarea>
+          <textarea class="inp" rows="${v?3:3}" onchange="S.${k}[${i}].text=this.value;S.${k}[${i}].audBuf=null;S.${k}[${i}].audBlob=null;retime('${k}');persist()">${esc(s.text)}</textarea>
           <input class="inp mt-1" value="${esc(s.kw)}" onchange="S.${k}[${i}].kw=this.value;persist()">
           <div class="flex flex-wrap gap-1 mt-1">
             <button class="btn btn-sub !py-1 !px-2 !text-xs" onclick="oneImage('${k}',${i})">이미지</button>
@@ -337,7 +348,9 @@ async function renderVideo(k){
     rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);
     const done=new Promise(r=>rec.onstop=r);
     const t0=a.currentTime+0.25;
-    list.forEach((s,i)=>{if(s.audBuf){const src=a.createBufferSource();src.buffer=s.audBuf;src.connect(dest);src.start(t0+starts[i]+0.2)}});
+    const trk=S.track[k];
+    if(trk){const src=a.createBufferSource();src.buffer=trk.buf;src.connect(dest);src.start(t0)}
+    else list.forEach((s,i)=>{if(s.audBuf){const src=a.createBufferSource();src.buffer=s.audBuf;src.connect(dest);src.start(t0+starts[i]+0.2)}});
     drawFrame(ctx,W,H,list[0],0,0,k==='short');rec.start(1000);
     await new Promise(res=>{(function loop(){
       const now=a.currentTime-t0;if(now>=T)return res();
@@ -365,6 +378,7 @@ async function downloadZip(){
   for(const k of['long','short']){
     const f=zip.folder(k==='long'?'longform':'shorts');
     S[k].forEach((s,i)=>{const nm='scene_'+pad(i+1);if(s.imgBlob)f.file(`images/${nm}.jpg`,s.imgBlob);if(s.audBlob)f.file(`audio/${nm}.mp3`,s.audBlob)});
+    if(S.track[k])f.file('audio/narration_'+S.track[k].name,S.track[k].blob);
     f.file('subtitles.srt',buildSrt(S[k]));
     f.file('script.txt',S[k].map((s,i)=>`[${i+1}] (${dur(s).toFixed(1)}초)\n${s.text}\n이미지: ${s.kw}`).join('\n\n'));
   }
