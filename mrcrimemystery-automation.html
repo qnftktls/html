@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mr. Crime Mystery - 미스터리 롱폼·쇼츠 제너레이터 @mrcrimemystery</title>
+<title>Mr. Crime Mystery - 미스터리 롱폼·쇼츠 제너레이터</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -113,8 +113,25 @@ body{background:#0b0f1a;color:#f1f5f9;font-family:'Noto Sans KR',sans-serif}
   <div class="flex flex-wrap items-center gap-3 mb-3 note">
     <label>저장 형식 <select id="vfmt" class="inp !w-auto !py-1"><option value="auto">자동 (mp4 우선)</option><option value="webm">webm</option></select></label>
     <label><input id="vmon" type="checkbox" checked> 녹화 중 소리 듣기</label>
+    <label><input id="vsub" type="checkbox" checked> 영상에 자막 넣기</label>
   </div>
   <div class="bar mb-2"><i id="renBar"></i></div><div id="renMsg" class="note mb-2"></div>
+  <div class="scene mb-3">
+    <div class="font-bold mb-2">🌐 해외용 자막 (유튜브 자막 파일)</div>
+    <div class="flex flex-wrap gap-3 note mb-2" id="trLangs">
+      <label><input type="checkbox" value="en" data-n="English" checked> English</label>
+      <label><input type="checkbox" value="ja" data-n="日本語" checked> 日本語</label>
+      <label><input type="checkbox" value="es" data-n="Español"> Español</label>
+      <label><input type="checkbox" value="pt" data-n="Português"> Português</label>
+      <label><input type="checkbox" value="id" data-n="Bahasa Indonesia"> Indonesia</label>
+      <label><input type="checkbox" value="zh-Hant" data-n="繁體中文"> 繁體中文</label>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <button id="btnTr" class="btn btn-sub" onclick="translateSubs()">자막 번역 만들기</button>
+      <button class="btn btn-sub" onclick="downloadSubs()">자막 파일만 받기 (SRT)</button>
+    </div>
+    <div id="trMsg" class="note mt-2">원본 자막과 같은 시간으로 언어별 SRT를 만듭니다. 유튜브 스튜디오 → 자막 → 언어 추가 → 파일 업로드(타이밍 포함)로 올리세요. 번역된 제목·설명도 함께 저장됩니다.</div>
+  </div>
   <canvas id="cv" class="w-full max-w-xl rounded-lg border border-slate-700 hidden"></canvas>
   <p class="note mt-2">영상은 실제 재생 시간만큼 녹화됩니다(8분 영상은 8분 이상). 녹화 중에는 이 탭을 화면에 띄워 두세요. 탭을 숨기면 화면이 멈춥니다. 브라우저에 따라 mp4 또는 webm으로 저장되며, webm은 유튜브에 그대로 올릴 수 있습니다.</p>
 </div>
@@ -127,7 +144,7 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const pad=n=>String(n).padStart(2,'0');
-const S={meta:null,long:[],short:[],track:{long:null,short:null}};
+const S={meta:null,long:[],short:[],track:{long:null,short:null},tr:{}};
 const CFG_KEY='mcm-settings',PRJ_KEY='mcm-project';
 const DIM={long:{w:1280,h:720},short:{w:720,h:1280}};
 
@@ -166,9 +183,9 @@ function buildPrompt(n,sec,min,lang){
 - source_summary: 원본 내용 3~4문장 요약. source_minutes: 원본 영상 길이(분, 모르면 0).`;
 }
 
-async function callGemini(parts,lowRes){
+async function callGemini(parts,lowRes,sch){
   const key=$('gkey').value.trim(),model=$('gmodel').value.trim()||'gemini-3-flash-preview';
-  const gc={responseMimeType:'application/json',responseSchema:schema};
+  const gc={responseMimeType:'application/json',responseSchema:sch||schema};
   if(lowRes)gc.mediaResolution='MEDIA_RESOLUTION_LOW';
   const body={contents:[{role:'user',parts}],generationConfig:gc};
   const url=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
@@ -198,7 +215,7 @@ $('btnGen').onclick=async()=>{
     try{d=await callGemini(parts,!!url)}
     catch(e){if(url&&e.status===400){d=await callGemini(parts,false)}else throw e}
     S.meta=d;
-    S.long=(d.scenes||[]).map(mk);S.short=(d.shorts?.scenes||[]).map(mk);S.track={long:null,short:null};
+    S.long=(d.scenes||[]).map(mk);S.short=(d.shorts?.scenes||[]).map(mk);S.track={long:null,short:null};S.tr={};
     persist();renderAll();
     msg('genMsg',`완료: 롱폼 ${S.long.length}장면, 쇼츠 ${S.short.length}장면`+(S.long.length!==n?` (요청 ${n}장면과 다릅니다. 부족하면 다시 생성하세요)`:''));
   }catch(e){
@@ -249,7 +266,7 @@ function drawList(k){
         <img id="${k}img${i}" class="thumb ${v?'v mb-2':''}" style="${v?'':'width:42%'}" ${s.img?`src="${s.img}"`:''} alt="">
         <div class="flex-1 min-w-0">
           <div class="note mb-1">#${i+1} <span id="${k}d${i}">${dur(s).toFixed(1)}초${s.audBuf?' 🔊':''}</span></div>
-          <textarea class="inp" rows="${v?3:3}" onchange="S.${k}[${i}].text=this.value;S.${k}[${i}].audBuf=null;S.${k}[${i}].audBlob=null;retime('${k}');persist()">${esc(s.text)}</textarea>
+          <textarea class="inp" rows="${v?3:3}" onchange="S.${k}[${i}].text=this.value;S.${k}[${i}].audBuf=null;S.${k}[${i}].audBlob=null;retime('${k}');S.tr={};persist()">${esc(s.text)}</textarea>
           <input class="inp mt-1" value="${esc(s.kw)}" onchange="S.${k}[${i}].kw=this.value;persist()">
           <div class="flex flex-wrap gap-1 mt-1">
             <button class="btn btn-sub !py-1 !px-2 !text-xs" onclick="oneImage('${k}',${i})">이미지</button>
@@ -323,6 +340,7 @@ function drawFrame(ctx,W,H,s,i,p,v){
   }else{const g=ctx.createRadialGradient(W/2,H/2,50,W/2,H/2,W*.8);g.addColorStop(0,'#1e293b');g.addColorStop(1,'#020617');ctx.fillStyle=g;ctx.fillRect(0,0,W,H)}
   const g=ctx.createLinearGradient(0,H*(v?.45:.5),0,H);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.85)');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
   const d=dur(s),tt=p*d,fade=Math.max(0,1-tt/.45,1-(d-tt)/.3);if(fade>0){ctx.fillStyle=`rgba(0,0,0,${Math.min(.7,fade*.7)})`;ctx.fillRect(0,0,W,H)}
+  if(!$('vsub').checked)return;
   const subs=splitSubs(s.text),tot=subs.reduce((a,x)=>a+x.length,0)||1;let acc=0,cur=subs[subs.length-1];
   for(const x of subs){acc+=x.length/tot;if(p<=acc){cur=x;break}}
   const fs=v?46:40;ctx.font=`900 ${fs}px "Noto Sans KR",sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineJoin='round';
@@ -371,7 +389,38 @@ function stamp(){const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+
 
 /* ---------- zip ---------- */
 function srtTime(t){const ms=Math.round(t*1000),h=Math.floor(ms/3600000),m=Math.floor(ms%3600000/60000),s=Math.floor(ms%60000/1000);return `${pad(h)}:${pad(m)}:${pad(s)},${String(ms%1000).padStart(3,'0')}`}
-function buildSrt(list){let t=0,n=1,out='';list.forEach(s=>{const d=dur(s),subs=splitSubs(s.text),tot=subs.reduce((a,x)=>a+x.length,0)||1;let c=t;subs.forEach(x=>{const dd=d*x.length/tot;out+=`${n++}\n${srtTime(c)} --> ${srtTime(c+dd)}\n${x}\n\n`;c+=dd});t+=d});return out}
+function buildSrt(list,texts){let t=0,n=1,out='';list.forEach((s,i)=>{const d=dur(s),subs=splitSubs(texts?texts[i]||'':s.text),tot=subs.reduce((a,x)=>a+x.length,0)||1;let c=t;subs.forEach(x=>{const dd=d*x.length/tot;out+=`${n++}\n${srtTime(c)} --> ${srtTime(c+dd)}\n${x}\n\n`;c+=dd});t+=d});return out}
+const trSchema={type:'OBJECT',properties:{long:{type:'ARRAY',items:{type:'STRING'}},short:{type:'ARRAY',items:{type:'STRING'}},title:{type:'STRING'},shorts_title:{type:'STRING'},description:{type:'STRING'}},required:['long','short','title','shorts_title','description']};
+async function translateSubs(){
+  if(!S.meta)return alert('먼저 대본을 만드세요.');
+  if(!$('gkey').value.trim())return alert('Gemini API 키를 입력하세요.');
+  const langs=[...document.querySelectorAll('#trLangs input:checked')].map(e=>[e.value,e.dataset.n]);
+  if(!langs.length)return alert('언어를 하나 이상 고르세요.');
+  $('btnTr').disabled=true;const ok=[],bad=[];
+  for(const [code,name] of langs){
+    msg('trMsg',`${name} 번역 중…`);
+    const src={long:S.long.map(s=>s.text),short:S.short.map(s=>s.text),title:(S.meta.titles||[])[0]||'',shorts_title:S.meta.shorts?.title||'',description:$('descBox')?.value||S.meta.description||''};
+    const prompt=`아래 JSON은 미스터리·사건사고 유튜브 영상의 자막과 제목·설명입니다. 모든 값을 ${name}(${code})로 자연스럽게 번역해 같은 구조의 JSON으로 돌려주세요.\n- long과 short 배열은 원본과 정확히 같은 개수, 같은 순서를 지킵니다(long ${src.long.length}개, short ${src.short.length}개). 항목을 합치거나 나누지 않습니다.\n- 자막으로 읽기 쉽게 간결하게, 사실 관계와 "~로 알려졌다" 같은 불확실성 표현은 그대로 유지합니다.\n- 인명·지명은 해당 언어의 통용 표기를 씁니다.\n\n${JSON.stringify(src)}`;
+    try{
+      const d=await callGemini([{text:prompt}],false,trSchema);
+      if(d.long.length!==src.long.length||d.short.length!==src.short.length)throw new Error(`장면 수가 다릅니다(${d.long.length}/${src.long.length})`);
+      S.tr[code]=d;ok.push(name);
+    }catch(e){bad.push(`${name}: ${e.message.slice(0,120)}`)}
+  }
+  $('btnTr').disabled=false;
+  msg('trMsg',(ok.length?`번역 완료: ${ok.join(', ')}. `:'')+(bad.length?`실패 — ${bad.join(' / ')}`:'자막 파일만 받기 또는 편집용 ZIP으로 내려받으세요.'),bad.length);
+}
+function addSubs(zip){
+  const src=$('lang').value==='English'?'en':$('lang').value==='日本語'?'ja':'ko';
+  for(const k of['long','short']){
+    const f=zip.folder(k==='long'?'longform':'shorts');
+    f.file(`subtitles_${src}.srt`,buildSrt(S[k]));
+    Object.entries(S.tr).forEach(([code,d])=>f.file(`subtitles_${code}.srt`,buildSrt(S[k],d[k])));
+  }
+  const tl=Object.entries(S.tr).map(([code,d])=>`[${code}]\n제목: ${d.title}\n쇼츠 제목: ${d.shorts_title}\n설명:\n${d.description}`).join('\n\n');
+  if(tl)zip.file('youtube_translations.txt',tl);
+}
+async function downloadSubs(){if(!S.meta)return alert('먼저 대본을 만드세요.');const zip=new JSZip();addSubs(zip);saveAs(await zip.generateAsync({type:'blob'}),`mrcrimemystery_subtitles_${stamp()}.zip`)}
 async function downloadZip(){
   if(!S.meta)return alert('먼저 대본을 만드세요.');
   const zip=new JSZip(),m=S.meta;
@@ -379,9 +428,9 @@ async function downloadZip(){
     const f=zip.folder(k==='long'?'longform':'shorts');
     S[k].forEach((s,i)=>{const nm='scene_'+pad(i+1);if(s.imgBlob)f.file(`images/${nm}.jpg`,s.imgBlob);if(s.audBlob)f.file(`audio/${nm}.mp3`,s.audBlob)});
     if(S.track[k])f.file('audio/narration_'+S.track[k].name,S.track[k].blob);
-    f.file('subtitles.srt',buildSrt(S[k]));
     f.file('script.txt',S[k].map((s,i)=>`[${i+1}] (${dur(s).toFixed(1)}초)\n${s.text}\n이미지: ${s.kw}`).join('\n\n'));
   }
+  addSubs(zip);
   zip.file('youtube_metadata.txt',`[제목 후보]\n${(m.titles||[]).join('\n')}\n\n[쇼츠 제목]\n${m.shorts?.title||''}\n\n[설명]\n${$('descBox')?.value||m.description}\n\n[태그]\n${(m.tags||[]).join(', ')}\n\n[중간 광고 추천 위치]\n${midrolls().join(', ')}\n\n[확인 필요]\n${(m.cautions||[]).map(c=>'- '+c).join('\n')}\n\n[업로드 체크]\n- 쇼츠 '관련 동영상'에 롱폼 지정\n- '변경되거나 합성된 콘텐츠'에 AI 사용 표시\n- 장면당 이미지에 확대·이동(Ken Burns) 효과 적용`);
   saveAs(await zip.generateAsync({type:'blob'}),`mrcrimemystery_${stamp()}.zip`);
 }
