@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mr. Crime Mystery - 미스터리 롱폼·쇼츠 제너레이터 v4</title>
+<title>Mr. Crime Mystery - 미스터리 롱폼·쇼츠 제너레이터 v5</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -123,6 +123,7 @@ body{background:#0b0f1a;color:#f1f5f9;font-family:'Noto Sans KR',sans-serif}
       <label><input type="checkbox" value="ja" data-n="日本語" checked> 日本語</label>
       <label><input type="checkbox" value="es" data-n="Español"> Español</label>
       <label><input type="checkbox" value="pt" data-n="Português"> Português</label>
+      <label><input type="checkbox" value="hi" data-n="हिन्दी (Hindi)"> हिन्दी</label>
       <label><input type="checkbox" value="id" data-n="Bahasa Indonesia"> Indonesia</label>
       <label><input type="checkbox" value="zh-Hant" data-n="繁體中文"> 繁體中文</label>
     </div>
@@ -335,7 +336,7 @@ async function genAudio(k){
 let player;function playOne(k,i){const s=S[k][i];if(!s.audUrl)return alert('먼저 음성을 생성하세요.');if(player)player.pause();player=new Audio(s.audUrl);player.play()}
 
 /* ---------- video render ---------- */
-function splitSubs(t){const a=t.match(/[^.!?。！？]+[.!?。！？]*\s*/g)||[t];return a.map(x=>x.trim()).filter(Boolean)}
+function splitSubs(t){const a=t.match(/[^.!?。！？।]+[.!?。！？।]*\s*/g)||[t];return a.map(x=>x.trim()).filter(Boolean)}
 function wrap(ctx,text,maxW){const out=[];let line='';for(const ch of text){if(ctx.measureText(line+ch).width>maxW&&line){const sp=line.lastIndexOf(' ');if(sp>line.length*0.5){out.push(line.slice(0,sp));line=line.slice(sp+1)+ch}else{out.push(line);line=ch}}else line+=ch}if(line)out.push(line);return out}
 function drawFrame(ctx,W,H,s,i,p,v){
   ctx.fillStyle='#05070d';ctx.fillRect(0,0,W,H);
