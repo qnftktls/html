@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mr. Crime Mystery - 미스터리 롱폼·쇼츠 제너레이터</title>
+<title>Mr. Crime Mystery - 미스터리 롱폼·쇼츠 제너레이터 v4</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -80,8 +80,8 @@ body{background:#0b0f1a;color:#f1f5f9;font-family:'Noto Sans KR',sans-serif}
     <div class="h2 !mb-0">🖼️ 4. 롱폼 장면 <span id="longInfo" class="note"></span></div>
     <div class="flex flex-wrap gap-2">
       <button class="btn btn-sub" onclick="genImages('long')">이미지 전체 생성</button>
-      <button class="btn btn-sub" onclick="copyNarr('long',this)">📋 나레이션 복사</button>
-      <label class="btn btn-sub">🎧 오디오 파일 선택<input type="file" accept="audio/*" class="hidden" onchange="loadTrack('long',this)"></label>
+      <span id="longCopy" class="flex flex-wrap gap-2"></span>
+      <label class="btn btn-sub">🎧 오디오 파일 선택<input type="file" accept="audio/*" multiple class="hidden" onchange="loadTrack('long',this)"></label>
       <button class="btn btn-sub" onclick="clearTrack('long')">오디오 해제</button>
     </div>
   </div>
@@ -94,8 +94,8 @@ body{background:#0b0f1a;color:#f1f5f9;font-family:'Noto Sans KR',sans-serif}
     <div class="h2 !mb-0">📱 5. 쇼츠 장면 <span id="shortInfo" class="note"></span></div>
     <div class="flex flex-wrap gap-2">
       <button class="btn btn-sub" onclick="genImages('short')">이미지 전체 생성</button>
-      <button class="btn btn-sub" onclick="copyNarr('short',this)">📋 나레이션 복사</button>
-      <label class="btn btn-sub">🎧 오디오 파일 선택<input type="file" accept="audio/*" class="hidden" onchange="loadTrack('short',this)"></label>
+      <span id="shortCopy" class="flex flex-wrap gap-2"></span>
+      <label class="btn btn-sub">🎧 오디오 파일 선택<input type="file" accept="audio/*" multiple class="hidden" onchange="loadTrack('short',this)"></label>
       <button class="btn btn-sub" onclick="clearTrack('short')">오디오 해제</button>
     </div>
   </div>
@@ -171,7 +171,7 @@ function buildPrompt(n,sec,min,lang){
 
 [규칙]
 - 원본의 문장, 표현, 구성을 그대로 옮기지 말고 사실만 참고해 새로 서술합니다. 원본이 30분 이상으로 길면 핵심 흐름만 남겨 압축합니다.
-- scenes는 정확히 ${n}개. 각 narration은 2~3문장, ${lang} 기준 약 ${chars}(읽는 데 약 ${sec}초)입니다.
+- scenes는 정확히 ${n}개. 각 narration은 2~3문장, ${lang} 기준 약 ${chars}(읽는 데 약 ${sec}초)입니다.${min<=8&&lang!=='English'?'\n- 모든 narration의 글자 수 합계(공백 포함)는 4,300자를 넘기지 않습니다. 음성 생성기의 1회 입력 한도 때문입니다.':''}
 - 구성: 강한 도입(첫 3장면에서 궁금증) → 배경 → 전개 → 반전 또는 쟁점 → 현재 상황 → 마무리 질문.
 - 확인되지 않은 내용은 "~로 알려졌다", "~라는 주장이 있다"처럼 구분합니다. 지어낸 사실을 넣지 않습니다.
 - 일반인의 실명, 주소, 얼굴 묘사 등 신상은 쓰지 않고 "A씨"처럼 익명 처리합니다. 유죄가 확정되지 않은 사람을 범인으로 단정하지 않습니다.
@@ -230,9 +230,12 @@ function restore(){try{const p=JSON.parse(localStorage.getItem(PRJ_KEY)||'null')
 
 /* ---------- UI ---------- */
 function dur(s){return s.td!=null?s.td:(s.audBuf?s.audBuf.duration+0.5:+$('tsec').value)}
-function retime(k){const tr=S.track[k],list=S[k];if(!tr){list.forEach(s=>s.td=null);return}const tot=list.reduce((a,s)=>a+Math.max(1,s.text.length),0);list.forEach(s=>s.td=tr.buf.duration*Math.max(1,s.text.length)/tot);if(list.length)list[list.length-1].td+=0.6}
-function copyNarr(k,b){if(!S[k].length)return alert('먼저 대본을 만드세요.');copy(S[k].map(s=>s.text.trim()).join('\n\n'),b)}
-async function loadTrack(k,inp){const f=inp.files[0];inp.value='';if(!f)return;if(!S[k].length)return alert('먼저 대본을 만드세요.');try{const buf=await ac().decodeAudioData(await f.arrayBuffer());S.track[k]={buf,blob:f,name:f.name};retime(k);renderAll()}catch(e){alert('오디오 파일을 읽지 못했습니다: '+e.message)}}
+const NARR_LIMIT=4800;
+function narrParts(k){const out=[];let cur=null;S[k].forEach((s,i)=>{const t=s.text.trim();if(cur&&cur.text.length+2+t.length<=NARR_LIMIT){cur.text+='\n\n'+t;cur.to=i}else{cur={from:i,to:i,text:t};out.push(cur)}});return out}
+function share(list,a,b,d){let tot=0;for(let i=a;i<=b;i++)tot+=Math.max(1,list[i].text.length);for(let i=a;i<=b;i++)list[i].td=d*Math.max(1,list[i].text.length)/tot}
+function retime(k){const tr=S.track[k],list=S[k];if(!tr||!list.length){list.forEach(s=>s.td=null);return}const parts=narrParts(k);if(tr.durs.length>1&&tr.durs.length===parts.length)parts.forEach((p,n)=>share(list,p.from,p.to,tr.durs[n]));else share(list,0,list.length-1,tr.buf.duration);list[list.length-1].td+=0.6}
+function copyNarr(k,n,b){const p=narrParts(k)[n];if(p)copy(p.text,b)}
+async function loadTrack(k,inp){const files=[...inp.files].sort((a,b)=>a.name.localeCompare(b.name));inp.value='';if(!files.length)return;if(!S[k].length)return alert('먼저 대본을 만드세요.');try{const a=ac(),bufs=[];for(const f of files)bufs.push(await a.decodeAudioData(await f.arrayBuffer()));let buf=bufs[0];if(bufs.length>1){const ch=Math.min(...bufs.map(b=>b.numberOfChannels)),len=bufs.reduce((x,b)=>x+b.length,0);buf=a.createBuffer(ch,len,bufs[0].sampleRate);let off=0;for(const b of bufs){for(let c=0;c<ch;c++)buf.getChannelData(c).set(b.getChannelData(c),off);off+=b.length}}S.track[k]={buf,files,durs:bufs.map(b=>b.duration),name:files.map(f=>f.name).join(', ')};retime(k);renderAll()}catch(e){alert('오디오 파일을 읽지 못했습니다: '+e.message)}}
 function clearTrack(k){S.track[k]=null;retime(k);renderAll()}
 function total(list){return list.reduce((a,s)=>a+dur(s),0)}
 function fmt(t){t=Math.round(t);return Math.floor(t/60)+':'+pad(t%60)}
@@ -259,7 +262,10 @@ function renderAll(){
 function drawList(k){
   const list=S[k],v=k==='short';
   $(k+'Info').textContent=`${list.length}장면 · 약 ${fmt(total(list))}`;
-  const tr=S.track[k];$(k+'Trk').innerHTML=tr?`🎧 <b class="text-emerald-400">${esc(tr.name)}</b> (${fmt(tr.buf.duration)}) 사용 중 — 장면 길이를 글자 수 비율로 나눴습니다. 문구를 고치면 오디오도 다시 만들어 선택하세요.`:'ElevenLabs 사이트에서 직접 만들 때: 나레이션 복사 → elevenlabs.io에 붙여넣어 생성·다운로드 → 오디오 파일 선택';
+  const tr=S.track[k],parts=narrParts(k);
+  $(k+'Copy').innerHTML=parts.map((p,n)=>`<button class="btn btn-sub" onclick="copyNarr('${k}',${n},this)">📋 나레이션 복사${parts.length>1?` ${n+1}/${parts.length}`:''} (${p.text.length.toLocaleString()}자)</button>`).join('');
+  const multi=parts.length>1?` 나레이션이 ${NARR_LIMIT.toLocaleString()}자를 넘어 ${parts.length}개로 나눴습니다. 순서대로 각각 음성을 만든 뒤 파일 ${parts.length}개를 한꺼번에 선택하세요(파일 이름 순서로 이어 붙입니다).`:'';
+  $(k+'Trk').innerHTML=tr?`🎧 <b class="text-emerald-400">${esc(tr.name)}</b> (${fmt(tr.buf.duration)}) 사용 중 — 장면 길이를 글자 수 비율로 나눴습니다. 문구를 고치면 오디오도 다시 만들어 선택하세요.${tr.durs.length!==parts.length&&parts.length>1?` <b class="text-rose-400">선택한 파일 ${tr.durs.length}개, 나레이션 ${parts.length}개로 개수가 다릅니다.</b>`:''}`:`ElevenLabs 사이트에서 직접 만들 때: 나레이션 복사 → elevenlabs.io에 붙여넣어 생성·다운로드 → 오디오 파일 선택. 복사 한 번은 ${NARR_LIMIT.toLocaleString()}자 이하로 맞춥니다.${multi}`;
   $(k+'List').innerHTML=list.map((s,i)=>`
     <div class="scene">
       <div class="${v?'':'flex gap-3'}">
@@ -427,7 +433,7 @@ async function downloadZip(){
   for(const k of['long','short']){
     const f=zip.folder(k==='long'?'longform':'shorts');
     S[k].forEach((s,i)=>{const nm='scene_'+pad(i+1);if(s.imgBlob)f.file(`images/${nm}.jpg`,s.imgBlob);if(s.audBlob)f.file(`audio/${nm}.mp3`,s.audBlob)});
-    if(S.track[k])f.file('audio/narration_'+S.track[k].name,S.track[k].blob);
+    if(S.track[k])S.track[k].files.forEach((x,n)=>f.file(`audio/narration_${pad(n+1)}_${x.name}`,x));
     f.file('script.txt',S[k].map((s,i)=>`[${i+1}] (${dur(s).toFixed(1)}초)\n${s.text}\n이미지: ${s.kw}`).join('\n\n'));
   }
   addSubs(zip);
