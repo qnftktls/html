@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mr. Crime Mystery - 미스터리 롱폼·쇼츠 제너레이터 v5</title>
+<title>Mr. Crime Mystery - 미스터리 롱폼·쇼츠 제너레이터 v6</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -174,6 +174,7 @@ function buildPrompt(n,sec,min,lang){
 - 원본의 문장, 표현, 구성을 그대로 옮기지 말고 사실만 참고해 새로 서술합니다. 원본이 30분 이상으로 길면 핵심 흐름만 남겨 압축합니다.
 - scenes는 정확히 ${n}개. 각 narration은 2~3문장, ${lang} 기준 약 ${chars}(읽는 데 약 ${sec}초)입니다.${min<=8&&lang!=='English'?'\n- 모든 narration의 글자 수 합계(공백 포함)는 4,300자를 넘기지 않습니다. 음성 생성기의 1회 입력 한도 때문입니다.':''}
 - 구성: 강한 도입(첫 3장면에서 궁금증) → 배경 → 전개 → 반전 또는 쟁점 → 현재 상황 → 마무리 질문.
+- 롱폼 마지막 scene의 narration은 반드시 채널 끝인사 한 문장으로 끝냅니다. 한국어면 "이상 미스터리 사건·사고, 크라임 앤 미스터리였습니다.", 영어면 "This has been Crime & Mystery.", 그 밖의 언어면 같은 뜻으로 채널명 "Crime & Mystery"를 넣어 씁니다. 기호 "/"와 괄호는 쓰지 않습니다(음성 생성기가 어색하게 읽습니다). shorts에는 넣지 않습니다.
 - 확인되지 않은 내용은 "~로 알려졌다", "~라는 주장이 있다"처럼 구분합니다. 지어낸 사실을 넣지 않습니다.
 - 일반인의 실명, 주소, 얼굴 묘사 등 신상은 쓰지 않고 "A씨"처럼 익명 처리합니다. 유죄가 확정되지 않은 사람을 범인으로 단정하지 않습니다.
 - 잔혹한 묘사, 피해자 비하, 혐오 표현은 쓰지 않습니다.
