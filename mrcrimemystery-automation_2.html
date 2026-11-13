@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mr. Crime Mystery - 미스터리 롱폼·쇼츠 제너레이터</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Black+Han+Sans&display=swap" rel="stylesheet">
+<style>
+body{background:#0b0f1a;color:#f1f5f9;font-family:'Noto Sans KR',sans-serif}
+.panel{background:#141a2a;border:1px solid #26304a;border-radius:14px;padding:18px;margin-bottom:16px}
+.inp{width:100%;background:#0b0f1a;border:1px solid #334155;border-radius:8px;padding:9px 11px;color:#f1f5f9;font-size:14px}
+.inp:focus{outline:2px solid #e11d48;border-color:#e11d48}
+.btn{border-radius:8px;padding:9px 14px;font-weight:700;font-size:14px;cursor:pointer;transition:.15s}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-main{background:linear-gradient(90deg,#e11d48,#7c3aed);color:#fff}
+.btn-sub{background:#1e293b;color:#e2e8f0;border:1px solid #334155}
+.btn-sub:hover{background:#273449}
+.lbl{display:block;font-size:12px;color:#94a3b8;margin-bottom:4px;font-weight:700}
+.h2{font-size:17px;font-weight:900;margin-bottom:12px}
+.note{font-size:12px;color:#94a3b8;line-height:1.6}
+.warn{background:#2a1a12;border:1px solid #7c4a1e;color:#fcd9b6;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.6}
+.scene{background:#0f1524;border:1px solid #26304a;border-radius:10px;padding:10px}
+.thumb{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:6px;background:#1e293b}
+.thumb.v{aspect-ratio:9/16}
+.bar{height:8px;background:#1e293b;border-radius:99px;overflow:hidden}
+.bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,#e11d48,#7c3aed);transition:width .2s}
+::-webkit-scrollbar{width:10px}::-webkit-scrollbar-track{background:#141a2a}::-webkit-scrollbar-thumb{background:#475569;border-radius:5px}
+</style>
+</head>
+<body>
+<div class="max-w-5xl mx-auto px-4 py-6">
+
+<header class="mb-5">
+  <h1 class="text-2xl font-black" style="font-family:'Black Han Sans'">🕵️ Mr. Crime Mystery <span class="text-rose-500">Automation</span></h1>
+  <p class="note mt-1">유튜브 주소 분석 → 8분 롱폼 대본·장면 이미지·음성·자막 → 30초 쇼츠까지 한 번에 만드는 도구</p>
+</header>
+
+<div class="panel">
+  <div class="h2">⚙️ 1. 설정 (키는 이 브라우저에만 저장됩니다)</div>
+  <div class="grid md:grid-cols-2 gap-3">
+    <div><label class="lbl">Gemini API 키 (대본·분석용, 필수)</label><input id="gkey" type="password" class="inp" placeholder="AIza..."></div>
+    <div><label class="lbl">Gemini 모델</label><input id="gmodel" class="inp" value="gemini-3-flash-preview"></div>
+    <div class="hidden"><label class="lbl">ElevenLabs API 키 (음성용, 선택)</label><input id="ekey" type="password" class="inp" placeholder="없으면 음성 없이 자막 영상으로 만들어집니다"></div>
+    <div class="hidden">
+      <div><label class="lbl">Voice ID</label><input id="evoice" class="inp" placeholder="ElevenLabs 목소리 ID"></div>
+      <div><label class="lbl">음성 모델</label><select id="emodel" class="inp"><option value="eleven_multilingual_v2">multilingual v2</option><option value="eleven_v3">v3 (감정 태그)</option><option value="eleven_turbo_v2_5">turbo v2.5</option></select></div>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="h2">🎬 2. 원본 입력</div>
+  <label class="lbl">유튜브 주소 (공개 영상)</label>
+  <input id="yurl" class="inp mb-3" placeholder="https://www.youtube.com/watch?v=...">
+  <label class="lbl">자막·메모 붙여넣기 (선택: 주소 분석이 실패하거나 내용을 보강할 때)</label>
+  <textarea id="ytext" class="inp mb-3" rows="4" placeholder="영상 자막, 기사 내용, 직접 조사한 사실을 붙여 넣으세요."></textarea>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+    <div><label class="lbl">목표 길이</label><select id="tmin" class="inp"><option value="8">8분 (중간 광고)</option><option value="10">10분</option><option value="5">5분</option></select></div>
+    <div><label class="lbl">이미지 1장당</label><select id="tsec" class="inp"><option value="8">8초</option><option value="10">10초</option></select></div>
+    <div><label class="lbl">언어</label><select id="lang" class="inp"><option value="한국어">한국어</option><option value="English">English</option><option value="日本語">日本語</option></select></div>
+    <div><label class="lbl">장면 수 (자동 계산)</label><input id="tcount" class="inp" readonly></div>
+  </div>
+  <button id="btnGen" class="btn btn-main w-full">🧠 분석하고 8분 대본 + 쇼츠 대본 만들기</button>
+  <div id="genMsg" class="note mt-2"></div>
+  <div class="warn mt-3">남의 영상을 그대로 줄여 올리면 저작권 침해와 유튜브 '재사용 콘텐츠' 판정으로 수익 창출이 거절될 수 있습니다. 이 도구는 원본을 <b>사실 관계 파악용</b>으로만 쓰고 대본을 새로 씁니다. 실제 사건은 기사로 교차 확인하고, 아래 '확인 필요' 항목을 직접 검토하세요.</div>
+</div>
+
+<div id="result" class="hidden">
+
+<div class="panel">
+  <div class="h2">📋 3. 분석 결과와 업로드 정보</div>
+  <div id="meta"></div>
+</div>
+
+<div class="panel">
+  <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+    <div class="h2 !mb-0">🖼️ 4. 롱폼 장면 <span id="longInfo" class="note"></span></div>
+    <div class="flex flex-wrap gap-2">
+      <button class="btn btn-sub" onclick="genImages('long')">이미지 전체 생성</button>
+      <span id="longCopy" class="flex flex-wrap gap-2"></span>
+      <label class="btn btn-sub">🎧 오디오 파일 선택<input type="file" accept="audio/*" multiple class="hidden" onchange="loadTrack('long',this)"></label>
+      <button class="btn btn-sub" onclick="clearTrack('long')">오디오 해제</button>
+    </div>
+  </div>
+  <div class="bar mb-2"><i id="longBar"></i></div><div id="longMsg" class="note mb-1"></div><div id="longTrk" class="note mb-3"></div>
+  <div id="longList" class="grid md:grid-cols-2 gap-3"></div>
+</div>
+
+<div class="panel">
+  <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+    <div class="h2 !mb-0">📱 5. 쇼츠 장면 <span id="shortInfo" class="note"></span></div>
+    <div class="flex flex-wrap gap-2">
+      <button class="btn btn-sub" onclick="genImages('short')">이미지 전체 생성</button>
+      <span id="shortCopy" class="flex flex-wrap gap-2"></span>
+      <label class="btn btn-sub">🎧 오디오 파일 선택<input type="file" accept="audio/*" multiple class="hidden" onchange="loadTrack('short',this)"></label>
+      <button class="btn btn-sub" onclick="clearTrack('short')">오디오 해제</button>
+    </div>
+  </div>
+  <div class="bar mb-2"><i id="shortBar"></i></div><div id="shortMsg" class="note mb-1"></div><div id="shortTrk" class="note mb-3"></div>
+  <div id="shortList" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+</div>
+
+<div class="panel">
+  <div class="h2">🎞️ 6. 영상 만들기와 다운로드</div>
+  <div class="grid md:grid-cols-3 gap-2 mb-3">
+    <button class="btn btn-main" onclick="renderVideo('long')">롱폼 영상 만들기 (1280×720)</button>
+    <button class="btn btn-main" onclick="renderVideo('short')">쇼츠 영상 만들기 (720×1280)</button>
+    <button class="btn btn-sub" onclick="downloadZip()">편집용 ZIP (이미지·음성·자막·대본)</button>
+  </div>
+  <div class="flex flex-wrap items-center gap-3 mb-3 note">
+    <label>저장 형식 <select id="vfmt" class="inp !w-auto !py-1"><option value="auto">자동 (mp4 우선)</option><option value="webm">webm</option></select></label>
+    <label><input id="vmon" type="checkbox" checked> 녹화 중 소리 듣기</label>
+    <label><input id="vsub" type="checkbox" checked> 영상에 자막 넣기</label>
+  </div>
+  <div class="bar mb-2"><i id="renBar"></i></div><div id="renMsg" class="note mb-2"></div>
+  <div class="scene mb-3">
+    <div class="font-bold mb-2">🌐 해외용 자막 (유튜브 자막 파일)</div>
+    <div class="flex flex-wrap gap-3 note mb-2" id="trLangs">
+      <label><input type="checkbox" value="en" data-n="English" checked> English</label>
+      <label><input type="checkbox" value="ja" data-n="日本語" checked> 日本語</label>
+      <label><input type="checkbox" value="es" data-n="Español"> Español</label>
+      <label><input type="checkbox" value="pt" data-n="Português"> Português</label>
+      <label><input type="checkbox" value="hi" data-n="हिन्दी (Hindi)"> हिन्दी</label>
+      <label><input type="checkbox" value="id" data-n="Bahasa Indonesia"> Indonesia</label>
+      <label><input type="checkbox" value="zh-Hant" data-n="繁體中文"> 繁體中文</label>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <button id="btnTr" class="btn btn-sub" onclick="translateSubs()">자막 번역 만들기</button>
+      <button class="btn btn-sub" onclick="downloadSubs()">자막 파일만 받기 (SRT)</button>
+    </div>
+    <div id="trMsg" class="note mt-2">원본 자막과 같은 시간으로 언어별 SRT를 만듭니다. 유튜브 스튜디오 → 자막 → 언어 추가 → 파일 업로드(타이밍 포함)로 올리세요. 번역된 제목·설명도 함께 저장됩니다.</div>
+  </div>
+  <canvas id="cv" class="w-full max-w-xl rounded-lg border border-slate-700 hidden"></canvas>
+  <p class="note mt-2">영상은 실제 재생 시간만큼 녹화됩니다(8분 영상은 8분 이상). 녹화 중에는 이 탭을 화면에 띄워 두세요. 탭을 숨기면 화면이 멈춥니다. 브라우저에 따라 mp4 또는 webm으로 저장되며, webm은 유튜브에 그대로 올릴 수 있습니다.</p>
+</div>
+
+</div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const pad=n=>String(n).padStart(2,'0');
+const S={meta:null,long:[],short:[],track:{long:null,short:null},tr:{}};
+const CFG_KEY='mcm-settings',PRJ_KEY='mcm-project';
+const DIM={long:{w:1280,h:720},short:{w:720,h:1280}};
+
+/* ---------- settings ---------- */
+function loadCfg(){try{const c=JSON.parse(localStorage.getItem(CFG_KEY)||'{}');['gkey','gmodel','ekey','evoice','emodel','tmin','tsec','lang'].forEach(k=>{if(c[k])$(k).value=c[k]})}catch(e){}calcCount()}
+function saveCfg(){const c={};['gkey','gmodel','ekey','evoice','emodel','tmin','tsec','lang'].forEach(k=>c[k]=$(k).value.trim());try{localStorage.setItem(CFG_KEY,JSON.stringify(c))}catch(e){}}
+function sceneCount(){return Math.ceil(+$('tmin').value*60/+$('tsec').value)+1}
+function calcCount(){$('tcount').value=sceneCount()+'장 (목표 길이를 넘기도록 1장 추가)'}
+['gkey','gmodel','ekey','evoice','emodel','tmin','tsec','lang'].forEach(k=>$(k).addEventListener('change',()=>{saveCfg();calcCount()}));
+
+/* ---------- Gemini ---------- */
+const SHOTS={extreme_wide:['익스트림 와이드','extreme wide shot, vast sense of scale'],wide:['와이드','stylized wide frame'],closeup:['클로즈업','close-up shot'],extreme_closeup:['익스트림 클로즈업','extreme close-up of hands or an object detail']};
+const LENSES={ultra_wide:['초광각','ultra wide-angle lens'],wide:['와이드','wide lens'],telephoto:['망원','telephoto lens compression'],macro:['마크로','macro lens']};
+const MOTIONS={push_in:'느린 푸시 인',static:'고정',tracking:'느린 트래킹',handheld:'핸드헬드 POV',quick_zoom:'빠른 줌',pedestal_up:'페데스탈 업',dolly_in:'달리 인'};
+const sceneSchema={type:'ARRAY',items:{type:'OBJECT',properties:{narration:{type:'STRING'},image_prompt:{type:'STRING'},shot:{type:'STRING',enum:Object.keys(SHOTS)},lens:{type:'STRING',enum:Object.keys(LENSES)},motion:{type:'STRING',enum:Object.keys(MOTIONS)}},required:['narration','image_prompt','shot','lens','motion']}};
+const schema={type:'OBJECT',properties:{
+  source_summary:{type:'STRING'},source_minutes:{type:'NUMBER'},
+  titles:{type:'ARRAY',items:{type:'STRING'}},description:{type:'STRING'},
+  tags:{type:'ARRAY',items:{type:'STRING'}},music:{type:'STRING'},cautions:{type:'ARRAY',items:{type:'STRING'}},
+  scenes:sceneSchema,
+  shorts:{type:'OBJECT',properties:{title:{type:'STRING'},scenes:sceneSchema},required:['title','scenes']}
+},required:['source_summary','titles','description','tags','music','cautions','scenes','shorts']};
+
+function buildPrompt(n,sec,min,lang){
+  const chars=sec>=10?'70~90자':'55~70자';
+  return `당신은 미스터리·사건사고 유튜브 채널의 작가입니다. 제공된 영상(또는 자료)의 사실 관계를 파악한 뒤, 완전히 새로운 문장으로 ${min}분짜리 롱폼 대본을 ${lang}로 씁니다.
+
+[규칙]
+- 원본의 문장, 표현, 구성을 그대로 옮기지 말고 사실만 참고해 새로 서술합니다. 원본이 30분 이상으로 길면 핵심 흐름만 남겨 압축합니다.
+- scenes는 정확히 ${n}개. 각 narration은 2~3문장, ${lang} 기준 약 ${chars}(읽는 데 약 ${sec}초)입니다.${min<=8&&lang!=='English'?'\n- 모든 narration의 글자 수 합계(공백 포함)는 4,300자를 넘기지 않습니다. 음성 생성기의 1회 입력 한도 때문입니다.':''}
+- 구성: 강한 도입(첫 3장면에서 궁금증) → 배경 → 전개 → 반전 또는 쟁점 → 현재 상황 → 마무리 질문.
+- 롱폼 마지막 scene의 narration은 반드시 채널 끝인사 한 문장으로 끝냅니다. 한국어면 "이상 미스터리 사건·사고, 크라임 앤 미스터리였습니다.", 영어면 "This has been Crime & Mystery.", 그 밖의 언어면 같은 뜻으로 채널명 "Crime & Mystery"를 넣어 씁니다. 기호 "/"와 괄호는 쓰지 않습니다(음성 생성기가 어색하게 읽습니다). shorts에는 넣지 않습니다.
+- 확인되지 않은 내용은 "~로 알려졌다", "~라는 주장이 있다"처럼 구분합니다. 지어낸 사실을 넣지 않습니다.
+- 일반인의 실명, 주소, 얼굴 묘사 등 신상은 쓰지 않고 "A씨"처럼 익명 처리합니다. 유죄가 확정되지 않은 사람을 범인으로 단정하지 않습니다.
+- 잔혹한 묘사, 피해자 비하, 혐오 표현은 쓰지 않습니다.
+- image_prompt는 영어로, 그 장면을 상징하는 분위기 중심의 장면 묘사입니다(실존 인물 얼굴, 글자, 유혈 묘사 금지). 예: "empty foggy alley at night, single street lamp".
+- 각 scene에는 그 narration 내용에 맞는 카메라 연출을 고릅니다(롱폼·쇼츠 모두).
+  · shot(사이즈): 규모감을 보여 줄 때 extreme_wide, 공간·상황 설명은 wide, 반응·긴장은 closeup, 손이나 사물의 디테일은 extreme_closeup. 와이드 계열과 클로즈업 계열을 교차시켜 같은 shot이 3장면 넘게 이어지지 않게 합니다.
+  · lens(렌즈): 광대함은 ultra_wide, 공간은 wide, 압축감은 telephoto, extreme_closeup에는 macro 또는 telephoto.
+  · motion(움직임): 기본은 push_in(매우 느린 푸시 인)과 static(고정). 이동·추적 장면은 tracking(느린 트래킹), 은밀히 다가가는 장면은 handheld(핸드헬드 POV), 대상에게 천천히 다가가는 장면은 dolly_in, 아래에서 위로 드러내는 장면은 pedestal_up(카메라 수직 상승). quick_zoom(빠른 줌)은 반전·충격 장면에만 드물게(전체의 10% 이하) 씁니다. 같은 motion이 3장면 넘게 이어지지 않게 합니다.
+  · image_prompt에는 shot과 lens에 맞는 구도를 반영합니다.
+- music: 유튜브 스튜디오 오디오 보관함에서 이 영상의 배경음악을 찾기 위한 안내문을 한국어로 3~4줄 씁니다. 형식: "장르: (보관함 장르 필터 영어명, 예: Cinematic, Ambient) / 분위기: (보관함 분위기 필터 영어명, 예: Dark, Dramatic) / 검색어: (영어 2~4개) / 사용 팁: (구간별 분위기 변화와 나레이션보다 작게 깔라는 안내)". 특정 곡 제목이나 아티스트는 지어내지 않습니다.
+- shorts: 본편에서 가장 궁금증을 끄는 부분으로 30초 이내 쇼츠 대본. scenes 4개, 각 narration은 1~2문장(약 6~7초). 첫 문장은 강한 훅, 마지막은 "전체 이야기는 본편에서"로 유도합니다. image_prompt는 세로 구도.
+- titles: 클릭을 부르되 과장·허위가 없는 제목 3개. description: 유튜브 설명란 초안(요약 3~4문장 + "이 영상은 공개 자료를 바탕으로 재구성했으며 AI 음성·이미지를 사용했습니다" 문구). tags: 10~15개.
+- cautions: 업로드 전에 사람이 직접 사실 확인해야 할 항목(날짜, 숫자, 인물, 판결 여부 등) 목록.
+- source_summary: 원본 내용 3~4문장 요약. source_minutes: 원본 영상 길이(분, 모르면 0).`;
+}
+
+async function callGemini(parts,lowRes,sch){
+  const key=$('gkey').value.trim(),model=$('gmodel').value.trim()||'gemini-3-flash-preview';
+  const gc={responseMimeType:'application/json',responseSchema:sch||schema};
+  if(lowRes)gc.mediaResolution='MEDIA_RESOLUTION_LOW';
+  const body={contents:[{role:'user',parts}],generationConfig:gc};
+  const url=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
+  let delay=1500,last;
+  for(let i=0;i<3;i++){
+    const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(r.ok){const j=await r.json();const t=j.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('');if(!t)throw new Error('응답이 비어 있습니다: '+(j.promptFeedback?.blockReason||j.candidates?.[0]?.finishReason||'알 수 없음'));return JSON.parse(t)}
+    const et=await r.text();last=new Error(`Gemini ${r.status}: ${et.slice(0,300)}`);last.status=r.status;
+    if(r.status===400||r.status===403||r.status===404)throw last;
+    await sleep(delay);delay*=2;
+  }
+  throw last;
+}
+
+$('btnGen').onclick=async()=>{
+  saveCfg();
+  const url=$('yurl').value.trim(),text=$('ytext').value.trim();
+  if(!$('gkey').value.trim())return msg('genMsg','Gemini API 키를 입력하세요.',1);
+  if(!url&&!text)return msg('genMsg','유튜브 주소나 자막·메모 중 하나는 입력하세요.',1);
+  const n=sceneCount(),sec=+$('tsec').value,min=+$('tmin').value,lang=$('lang').value;
+  const parts=[];
+  if(url)parts.push({fileData:{fileUri:url}});
+  parts.push({text:buildPrompt(n,sec,min,lang)+(text?`\n\n[추가 자료]\n${text}`:'')});
+  $('btnGen').disabled=true;msg('genMsg','분석 중입니다. 긴 영상은 몇 분 걸릴 수 있습니다…');
+  try{
+    let d;
+    try{d=await callGemini(parts,!!url)}
+    catch(e){if(url&&e.status===400){d=await callGemini(parts,false)}else throw e}
+    S.meta=d;
+    S.long=(d.scenes||[]).map(mk);S.short=(d.shorts?.scenes||[]).map(mk);S.track={long:null,short:null};S.tr={};
+    persist();renderAll();
+    msg('genMsg',`완료: 롱폼 ${S.long.length}장면, 쇼츠 ${S.short.length}장면`+(S.long.length!==n?` (요청 ${n}장면과 다릅니다. 부족하면 다시 생성하세요)`:''));
+  }catch(e){
+    msg('genMsg','실패: '+e.message+(url?' — 주소 분석이 안 되면 자막을 붙여 넣고 주소를 비운 뒤 다시 시도하세요.':''),1);
+  }
+  $('btnGen').disabled=false;
+};
+function mk(s){return{text:s.narration||'',kw:s.image_prompt||'',shot:SHOTS[s.shot]?s.shot:'',lens:LENSES[s.lens]?s.lens:'',motion:MOTIONS[s.motion]?s.motion:'',img:null,imgBlob:null,audBlob:null,audBuf:null,audUrl:null}}
+function msg(id,t,err){const e=$(id);e.textContent=t;e.style.color=err?'#fda4af':'#94a3b8'}
+const sv=s=>({text:s.text,kw:s.kw,shot:s.shot,lens:s.lens,motion:s.motion}),ld=s=>mk({narration:s.text,image_prompt:s.kw,shot:s.shot,lens:s.lens,motion:s.motion});
+function persist(){try{localStorage.setItem(PRJ_KEY,JSON.stringify({meta:S.meta,long:S.long.map(sv),short:S.short.map(sv)}))}catch(e){}}
+function restore(){try{const p=JSON.parse(localStorage.getItem(PRJ_KEY)||'null');if(p&&p.meta){S.meta=p.meta;S.long=p.long.map(ld);S.short=p.short.map(ld);renderAll();msg('genMsg','지난 작업의 대본을 불러왔습니다(이미지·음성은 다시 생성해야 합니다).')}}catch(e){}}
+
+/* ---------- UI ---------- */
+function dur(s){return s.td!=null?s.td:(s.audBuf?s.audBuf.duration+0.5:+$('tsec').value)}
+const NARR_LIMIT=4800;
+function narrParts(k){const out=[];let cur=null;S[k].forEach((s,i)=>{const t=s.text.trim();if(cur&&cur.text.length+2+t.length<=NARR_LIMIT){cur.text+='\n\n'+t;cur.to=i}else{cur={from:i,to:i,text:t};out.push(cur)}});return out}
+function share(list,a,b,d){let tot=0;for(let i=a;i<=b;i++)tot+=Math.max(1,list[i].text.length);for(let i=a;i<=b;i++)list[i].td=d*Math.max(1,list[i].text.length)/tot}
+function retime(k){const tr=S.track[k],list=S[k];if(!tr||!list.length){list.forEach(s=>s.td=null);return}const parts=narrParts(k);if(tr.durs.length>1&&tr.durs.length===parts.length)parts.forEach((p,n)=>share(list,p.from,p.to,tr.durs[n]));else share(list,0,list.length-1,tr.buf.duration);list[list.length-1].td+=0.6}
+function copyNarr(k,n,b){const p=narrParts(k)[n];if(p)copy(p.text,b)}
+async function loadTrack(k,inp){const files=[...inp.files].sort((a,b)=>a.name.localeCompare(b.name));inp.value='';if(!files.length)return;if(!S[k].length)return alert('먼저 대본을 만드세요.');try{const a=ac(),bufs=[];for(const f of files)bufs.push(await a.decodeAudioData(await f.arrayBuffer()));let buf=bufs[0];if(bufs.length>1){const ch=Math.min(...bufs.map(b=>b.numberOfChannels)),len=bufs.reduce((x,b)=>x+b.length,0);buf=a.createBuffer(ch,len,bufs[0].sampleRate);let off=0;for(const b of bufs){for(let c=0;c<ch;c++)buf.getChannelData(c).set(b.getChannelData(c),off);off+=b.length}}S.track[k]={buf,files,durs:bufs.map(b=>b.duration),name:files.map(f=>f.name).join(', ')};retime(k);renderAll()}catch(e){alert('오디오 파일을 읽지 못했습니다: '+e.message)}}
+function clearTrack(k){S.track[k]=null;retime(k);renderAll()}
+function total(list){return list.reduce((a,s)=>a+dur(s),0)}
+function fmt(t){t=Math.round(t);return Math.floor(t/60)+':'+pad(t%60)}
+function midrolls(){const T=total(S.long);let acc=0,out=[];const targets=[T/3,T*2/3];S.long.forEach(s=>{const nx=acc+dur(s);targets.forEach((g,i)=>{if(acc<g&&nx>=g&&!out[i])out[i]=fmt(nx)});acc=nx});return out.filter(Boolean)}
+function renderAll(){
+  $('result').classList.remove('hidden');
+  const m=S.meta,T=total(S.long),need=+$('tmin').value*60;
+  const chars=[...S.long,...S.short].reduce((a,s)=>a+s.text.length,0);
+  $('meta').innerHTML=`
+    <p class="note mb-2"><b class="text-slate-200">원본 요약</b>${m.source_minutes?` (약 ${Math.round(m.source_minutes)}분)`:''}: ${esc(m.source_summary)}</p>
+    <div class="warn mb-3"><b>확인 필요 (업로드 전 직접 검토)</b><ul class="list-disc pl-5 mt-1">${(m.cautions||[]).map(c=>`<li>${esc(c)}</li>`).join('')||'<li>없음</li>'}</ul></div>
+    <div class="grid md:grid-cols-2 gap-3">
+      <div><label class="lbl">제목 후보</label>${(m.titles||[]).map(t=>`<div class="flex gap-2 mb-1"><input class="inp" value="${esc(t)}" readonly><button class="btn btn-sub" onclick="copy(this.previousElementSibling.value,this)">복사</button></div>`).join('')}
+        <label class="lbl mt-2">쇼츠 제목</label><div class="flex gap-2"><input class="inp" value="${esc(m.shorts?.title)}" readonly><button class="btn btn-sub" onclick="copy(this.previousElementSibling.value,this)">복사</button></div>
+        <label class="lbl mt-2">태그</label><div class="flex gap-2"><input class="inp" value="${esc((m.tags||[]).join(', '))}" readonly><button class="btn btn-sub" onclick="copy(this.previousElementSibling.value,this)">복사</button></div></div>
+      <div><label class="lbl">설명란</label><textarea id="descBox" class="inp" rows="7">${esc(m.description)}</textarea><button class="btn btn-sub mt-1" onclick="copy($('descBox').value,this)">설명 복사</button></div>
+    </div>
+    <div class="mt-3"><label class="lbl">🎵 배경음악 찾기 (유튜브 스튜디오 → 오디오 보관함)</label><textarea id="musicBox" class="inp" rows="4" onchange="S.meta.music=this.value;persist()">${esc(m.music||'이 대본에는 음악 안내가 없습니다. 대본을 다시 만들면 채워집니다.')}</textarea><button class="btn btn-sub mt-1" onclick="copy($('musicBox').value,this)">음악 안내 복사</button></div>
+    <div class="note mt-3">
+      ⏱ 예상 길이 <b class="${T>=need?'text-emerald-400':'text-rose-400'}">${fmt(T)}</b> ${T>=need?'(목표 달성)':`(목표 ${fmt(need)}보다 짧습니다. 오디오가 짧으면 대본을 늘려 다시 만드세요)`} · 중간 광고 추천 위치: ${midrolls().join(', ')||'-'} · 나레이션 글자 수 약 ${chars.toLocaleString()}자<br>
+      ✅ 업로드 순서: ① 롱폼 업로드 ② 쇼츠 업로드 ③ 유튜브 스튜디오 → 쇼츠 세부정보 → '관련 동영상'에 롱폼 지정 ④ '변경되거나 합성된 콘텐츠' 항목에 AI 사용 표시
+    </div>`;
+  drawList('long');drawList('short');
+}
+function sel(k,i,f,map,lab){const v=S[k][i][f];return `<select class="inp !w-auto !py-1 !px-1 !text-xs" title="${lab}" onchange="S.${k}[${i}].${f}=this.value;persist()"><option value="">${lab}: 자동</option>${Object.keys(map).map(o=>`<option value="${o}"${o===v?' selected':''}>${lab}: ${Array.isArray(map[o])?map[o][0]:map[o]}</option>`).join('')}</select>`}
+function drawList(k){
+  const list=S[k],v=k==='short';
+  $(k+'Info').textContent=`${list.length}장면 · 약 ${fmt(total(list))}`;
+  const tr=S.track[k],parts=narrParts(k);
+  $(k+'Copy').innerHTML=parts.map((p,n)=>`<button class="btn btn-sub" onclick="copyNarr('${k}',${n},this)">📋 나레이션 복사${parts.length>1?` ${n+1}/${parts.length}`:''} (${p.text.length.toLocaleString()}자)</button>`).join('');
+  const multi=parts.length>1?` 나레이션이 ${NARR_LIMIT.toLocaleString()}자를 넘어 ${parts.length}개로 나눴습니다. 순서대로 각각 음성을 만든 뒤 파일 ${parts.length}개를 한꺼번에 선택하세요(파일 이름 순서로 이어 붙입니다).`:'';
+  $(k+'Trk').innerHTML=tr?`🎧 <b class="text-emerald-400">${esc(tr.name)}</b> (${fmt(tr.buf.duration)}) 사용 중 — 장면 길이를 글자 수 비율로 나눴습니다. 문구를 고치면 오디오도 다시 만들어 선택하세요.${tr.durs.length!==parts.length&&parts.length>1?` <b class="text-rose-400">선택한 파일 ${tr.durs.length}개, 나레이션 ${parts.length}개로 개수가 다릅니다.</b>`:''}`:`ElevenLabs 사이트에서 직접 만들 때: 나레이션 복사 → elevenlabs.io에 붙여넣어 생성·다운로드 → 오디오 파일 선택. 복사 한 번은 ${NARR_LIMIT.toLocaleString()}자 이하로 맞춥니다.${multi}`;
+  $(k+'List').innerHTML=list.map((s,i)=>`
+    <div class="scene">
+      <div class="${v?'':'flex gap-3'}">
+        <img id="${k}img${i}" class="thumb ${v?'v mb-2':''}" style="${v?'':'width:42%'}" ${s.img?`src="${s.img}"`:''} alt="">
+        <div class="flex-1 min-w-0">
+          <div class="note mb-1">#${i+1} <span id="${k}d${i}">${dur(s).toFixed(1)}초${s.audBuf?' 🔊':''}</span></div>
+          <textarea class="inp" rows="${v?3:3}" onchange="S.${k}[${i}].text=this.value;S.${k}[${i}].audBuf=null;S.${k}[${i}].audBlob=null;retime('${k}');S.tr={};persist()">${esc(s.text)}</textarea>
+          <input class="inp mt-1" value="${esc(s.kw)}" onchange="S.${k}[${i}].kw=this.value;persist()">
+          <div class="flex flex-wrap gap-1 mt-1 items-center">
+            <button class="btn btn-sub !py-1 !px-2 !text-xs" onclick="oneImage('${k}',${i})">이미지</button>
+            ${sel(k,i,'shot',SHOTS,'사이즈')}${sel(k,i,'lens',LENSES,'렌즈')}${sel(k,i,'motion',MOTIONS,'모션')}
+          </div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+function copy(t,b){navigator.clipboard.writeText(t).then(()=>{const o=b.textContent;b.textContent='복사됨';setTimeout(()=>b.textContent=o,1200)})}
+
+/* ---------- images (Pollinations) ---------- */
+const STYLE=', dark cinematic photo, moody lighting, film noir atmosphere, mystery, high detail, no text, no watermark, no blood';
+async function fetchImage(kw,k){
+  const {w,h}=DIM[k],seed=Math.floor(Math.random()*900000)+100000;
+  const u=`https://image.pollinations.ai/prompt/${encodeURIComponent(kw+STYLE)}?width=${w}&height=${h}&nologo=true&seed=${seed}`;
+  for(let i=0;i<3;i++){
+    try{const r=await fetch(u);if(r.ok){const b=await r.blob();if(b.type.startsWith('image/'))return b}}catch(e){}
+    await sleep(2500*(i+1));
+  }
+  const r=await fetch(`https://picsum.photos/seed/${encodeURIComponent(kw.slice(0,30))}/${w}/${h}?grayscale`);
+  if(!r.ok)throw new Error('이미지 실패');return await r.blob();
+}
+function loadImg(blob){return new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=rej;im.src=URL.createObjectURL(blob)})}
+async function oneImage(k,i){
+  const s=S[k][i];const b=await fetchImage(s.kw+(s.shot?', '+SHOTS[s.shot][1]:'')+(s.lens?', '+LENSES[s.lens][1]:''),k);
+  s.imgBlob=b;s.imgEl=await loadImg(b);s.img=s.imgEl.src;const e=$(k+'img'+i);if(e)e.src=s.img;
+}
+let busy=false;
+async function genImages(k){
+  if(busy)return;busy=true;const list=S[k];let done=0,fail=0;
+  for(let i=0;i<list.length;i++){
+    if(!list[i].imgEl){try{await oneImage(k,i)}catch(e){fail++}}
+    done++;$(k+'Bar').style.width=(done/list.length*100)+'%';msg(k+'Msg',`이미지 ${done}/${list.length}${fail?` (실패 ${fail})`:''}`);
+  }
+  msg(k+'Msg',`이미지 완료${fail?` — ${fail}장 실패, 해당 장면의 '이미지' 버튼으로 다시 시도하세요`:''}`,fail);busy=false;
+}
+
+/* ---------- audio (ElevenLabs) ---------- */
+let actx;const ac=()=>actx||(actx=new (window.AudioContext||window.webkitAudioContext)());
+async function oneAudio(k,i,quiet){
+  const key=$('ekey').value.trim(),voice=$('evoice').value.trim();
+  if(!key||!voice){if(!quiet)alert('ElevenLabs API 키와 Voice ID를 입력하세요.');throw new Error('키 없음')}
+  const s=S[k][i];
+  const r=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voice)}?output_format=mp3_44100_128`,{method:'POST',headers:{'xi-api-key':key,'Content-Type':'application/json'},body:JSON.stringify({text:s.text,model_id:$('emodel').value})});
+  if(!r.ok)throw new Error('ElevenLabs '+r.status+': '+(await r.text()).slice(0,200));
+  s.audBlob=await r.blob();s.audBuf=await ac().decodeAudioData(await s.audBlob.arrayBuffer());s.audUrl=URL.createObjectURL(s.audBlob);
+  const e=$(k+'d'+i);if(e)e.textContent=dur(s).toFixed(1)+'초 🔊';
+}
+async function genAudio(k){
+  if(busy)return;
+  if(!$('ekey').value.trim()||!$('evoice').value.trim())return alert('ElevenLabs API 키와 Voice ID를 입력하세요.');
+  busy=true;const list=S[k];let done=0,err='';
+  for(let i=0;i<list.length;i++){
+    if(!list[i].audBuf){try{await oneAudio(k,i,true)}catch(e){err=e.message;break}}
+    done++;$(k+'Bar').style.width=(done/list.length*100)+'%';msg(k+'Msg',`음성 ${done}/${list.length}`);
+  }
+  if(err)msg(k+'Msg','음성 중단: '+err,1);else msg(k+'Msg','음성 완료');
+  busy=false;renderAll();
+}
+let player;function playOne(k,i){const s=S[k][i];if(!s.audUrl)return alert('먼저 음성을 생성하세요.');if(player)player.pause();player=new Audio(s.audUrl);player.play()}
+
+/* ---------- video render ---------- */
+function splitSubs(t){const a=t.match(/[^.!?。！？।]+[.!?。！？।]*\s*/g)||[t];return a.map(x=>x.trim()).filter(Boolean)}
+function wrap(ctx,text,maxW){const out=[];let line='';for(const ch of text){if(ctx.measureText(line+ch).width>maxW&&line){const sp=line.lastIndexOf(' ');if(sp>line.length*0.5){out.push(line.slice(0,sp));line=line.slice(sp+1)+ch}else{out.push(line);line=ch}}else line+=ch}if(line)out.push(line);return out}
+function camera(s,i,p,W,H){
+  const e=p*p*(3-2*p),t=p*dur(s),sg=i%2?-1:1;
+  switch(s.motion){
+    case'push_in':return[1.04+0.08*p,0,0];
+    case'static':return[1.03+0.012*p,0,0];
+    case'tracking':return[1.12,(p-.5)*W*.08*sg,0];
+    case'handheld':return[1.09+0.08*p,Math.sin(t*1.7)*W*.004+Math.sin(t*3.3)*W*.002,Math.sin(t*2.1+1)*H*.005+Math.sin(t*4.1)*H*.002];
+    case'quick_zoom':{const q=Math.min(1,Math.max(0,(t-dur(s)*.45)/.45)),z=q*q*(3-2*q);return[1.04+0.02*p+0.22*z,0,0]}
+    case'pedestal_up':return[1.14,0,(e-.5)*H*.1];
+    case'dolly_in':return[1.05+0.17*e,0,0];
+  }
+  const zin=i%2===0,dir=[1,-1,0,0][i%4],dy=[0,0,1,-1][i%4];
+  return[zin?1.05+0.11*p:1.16-0.11*p,(p-.5)*W*.035*dir,(p-.5)*H*.035*dy];
+}
+function subPad(d){return Math.min(1,d/8)}
+function drawFrame(ctx,W,H,s,i,p,v){
+  ctx.fillStyle='#05070d';ctx.fillRect(0,0,W,H);
+  if(s.imgEl){
+    const [sc,ox,oy]=camera(s,i,p,W,H);
+    const k=Math.max(W/s.imgEl.width,H/s.imgEl.height)*sc,dw=s.imgEl.width*k,dh=s.imgEl.height*k;
+    ctx.drawImage(s.imgEl,(W-dw)/2+ox,(H-dh)/2+oy,dw,dh);
+  }else{const g=ctx.createRadialGradient(W/2,H/2,50,W/2,H/2,W*.8);g.addColorStop(0,'#1e293b');g.addColorStop(1,'#020617');ctx.fillStyle=g;ctx.fillRect(0,0,W,H)}
+  const g=ctx.createLinearGradient(0,H*(v?.45:.5),0,H);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.85)');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  const d=dur(s),tt=p*d,fade=Math.max(0,1-tt/.45,1-(d-tt)/.3);if(fade>0){ctx.fillStyle=`rgba(0,0,0,${Math.min(.7,fade*.7)})`;ctx.fillRect(0,0,W,H)}
+  if(!$('vsub').checked)return;
+  const pd=subPad(d);if(tt<pd||tt>d-pd)return;
+  const sp=(tt-pd)/(d-2*pd),subs=splitSubs(s.text),tot=subs.reduce((a,x)=>a+x.length,0)||1;let acc=0,cur=subs[subs.length-1];
+  for(const x of subs){acc+=x.length/tot;if(sp<=acc){cur=x;break}}
+  const fs=v?46:40;ctx.font=`900 ${fs}px "Noto Sans KR",sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineJoin='round';
+  const lines=wrap(ctx,cur||'',W*(v?.86:.84)),lh=fs*1.35,y0=(v?H*.72:H-70)-(lines.length-1)*lh*(v?.5:1);
+  lines.forEach((ln,j)=>{const y=y0+j*lh;ctx.lineWidth=8;ctx.strokeStyle='rgba(0,0,0,.9)';ctx.strokeText(ln,W/2,y);ctx.fillStyle='#fff';ctx.fillText(ln,W/2,y)});
+}
+function pickMime(){const all=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];for(const m of($('vfmt').value==='webm'?all.slice(1):all))if(window.MediaRecorder&&MediaRecorder.isTypeSupported(m))return m;return''}
+let rendering=false;
+async function renderVideo(k){
+  if(rendering)return;const list=S[k];if(!list.length)return alert('먼저 대본을 만드세요.');
+  if(!list.some(s=>s.imgEl)&&!confirm('이미지가 없습니다. 배경 없이 만들까요?'))return;
+  const mime=pickMime();if(!mime)return alert('이 브라우저는 영상 녹화를 지원하지 않습니다. Chrome을 사용하거나 편집용 ZIP을 받으세요.');
+  rendering=true;
+  try{
+    await document.fonts.load('900 40px "Noto Sans KR"');
+    const {w:W,h:H}=DIM[k],cv=$('cv');cv.width=W;cv.height=H;cv.classList.remove('hidden');
+    const ctx=cv.getContext('2d'),a=ac();await a.resume();
+    const dest=a.createMediaStreamDestination();
+    const keep=a.createOscillator(),kg=a.createGain();kg.gain.value=0.0001;keep.connect(kg);kg.connect(dest);keep.start();
+    const starts=[];let t=0;list.forEach(s=>{starts.push(t);t+=dur(s)});const T=t;
+    const stream=new MediaStream([...cv.captureStream(30).getVideoTracks(),...dest.stream.getAudioTracks()]);
+    const rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:k==='long'?5e6:6e6}),chunks=[];
+    rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);
+    const done=new Promise(r=>rec.onstop=r);
+    const t0=a.currentTime+0.25;
+    const trk=S.track[k],mix=a.createGain();mix.connect(dest);if($('vmon').checked)mix.connect(a.destination);
+    if(trk){const src=a.createBufferSource();src.buffer=trk.buf;src.connect(mix);src.start(t0)}
+    else list.forEach((s,i)=>{if(s.audBuf){const src=a.createBufferSource();src.buffer=s.audBuf;src.connect(mix);src.start(t0+starts[i]+0.2)}});
+    drawFrame(ctx,W,H,list[0],0,0,k==='short');rec.start(1000);
+    await new Promise(res=>{(function loop(){
+      const now=a.currentTime-t0;if(now>=T)return res();
+      let i=0;while(i<list.length-1&&now>=starts[i+1])i++;
+      const p=Math.min(1,Math.max(0,(now-starts[i])/dur(list[i])));
+      drawFrame(ctx,W,H,list[i],i,p,k==='short');
+      $('renBar').style.width=(now/T*100)+'%';msg('renMsg',`녹화 중 ${fmt(Math.max(0,now))} / ${fmt(T)} (탭을 화면에 띄워 두세요)`);
+      requestAnimationFrame(loop)})()});
+    rec.stop();await done;keep.stop();
+    const ext=mime.startsWith('video/mp4')?'mp4':'webm';
+    saveAs(new Blob(chunks,{type:mime.split(';')[0]}),`mrcrimemystery_${k}_${stamp()}.${ext}`);
+    $('renBar').style.width='100%';msg('renMsg',`완료: ${fmt(T)} 길이 ${ext} 파일을 저장했습니다.`);
+    window.__lastRender={size:chunks.reduce((x,c)=>x+c.size,0),T,ext};
+  }catch(e){msg('renMsg','녹화 실패: '+e.message,1)}
+  rendering=false;
+}
+function stamp(){const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+
+/* ---------- zip ---------- */
+function srtTime(t){const ms=Math.round(t*1000),h=Math.floor(ms/3600000),m=Math.floor(ms%3600000/60000),s=Math.floor(ms%60000/1000);return `${pad(h)}:${pad(m)}:${pad(s)},${String(ms%1000).padStart(3,'0')}`}
+function buildSrt(list,texts){let t=0,n=1,out='';list.forEach((s,i)=>{const d=dur(s),subs=splitSubs(texts?texts[i]||'':s.text),tot=subs.reduce((a,x)=>a+x.length,0)||1;const pd=subPad(d);let c=t+pd;subs.forEach(x=>{const dd=(d-2*pd)*x.length/tot;out+=`${n++}\n${srtTime(c)} --> ${srtTime(c+dd)}\n${x}\n\n`;c+=dd});t+=d});return out}
+const trSchema={type:'OBJECT',properties:{long:{type:'ARRAY',items:{type:'STRING'}},short:{type:'ARRAY',items:{type:'STRING'}},title:{type:'STRING'},shorts_title:{type:'STRING'},description:{type:'STRING'}},required:['long','short','title','shorts_title','description']};
+async function translateSubs(){
+  if(!S.meta)return alert('먼저 대본을 만드세요.');
+  if(!$('gkey').value.trim())return alert('Gemini API 키를 입력하세요.');
+  const langs=[...document.querySelectorAll('#trLangs input:checked')].map(e=>[e.value,e.dataset.n]);
+  if(!langs.length)return alert('언어를 하나 이상 고르세요.');
+  $('btnTr').disabled=true;const ok=[],bad=[];
+  for(const [code,name] of langs){
+    msg('trMsg',`${name} 번역 중…`);
+    const src={long:S.long.map(s=>s.text),short:S.short.map(s=>s.text),title:(S.meta.titles||[])[0]||'',shorts_title:S.meta.shorts?.title||'',description:$('descBox')?.value||S.meta.description||''};
+    const prompt=`아래 JSON은 미스터리·사건사고 유튜브 영상의 자막과 제목·설명입니다. 모든 값을 ${name}(${code})로 자연스럽게 번역해 같은 구조의 JSON으로 돌려주세요.\n- long과 short 배열은 원본과 정확히 같은 개수, 같은 순서를 지킵니다(long ${src.long.length}개, short ${src.short.length}개). 항목을 합치거나 나누지 않습니다.\n- 자막으로 읽기 쉽게 간결하게, 사실 관계와 "~로 알려졌다" 같은 불확실성 표현은 그대로 유지합니다.\n- 인명·지명은 해당 언어의 통용 표기를 씁니다.\n\n${JSON.stringify(src)}`;
+    try{
+      const d=await callGemini([{text:prompt}],false,trSchema);
+      if(d.long.length!==src.long.length||d.short.length!==src.short.length)throw new Error(`장면 수가 다릅니다(${d.long.length}/${src.long.length})`);
+      S.tr[code]=d;ok.push(name);
+    }catch(e){bad.push(`${name}: ${e.message.slice(0,120)}`)}
+  }
+  $('btnTr').disabled=false;
+  msg('trMsg',(ok.length?`번역 완료: ${ok.join(', ')}. `:'')+(bad.length?`실패 — ${bad.join(' / ')}`:'자막 파일만 받기 또는 편집용 ZIP으로 내려받으세요.'),bad.length);
+}
+function addSubs(zip){
+  const src=$('lang').value==='English'?'en':$('lang').value==='日本語'?'ja':'ko';
+  for(const k of['long','short']){
+    const f=zip.folder(k==='long'?'longform':'shorts');
+    f.file(`subtitles_${src}.srt`,buildSrt(S[k]));
+    Object.entries(S.tr).forEach(([code,d])=>f.file(`subtitles_${code}.srt`,buildSrt(S[k],d[k])));
+  }
+  const tl=Object.entries(S.tr).map(([code,d])=>`[${code}]\n제목: ${d.title}\n쇼츠 제목: ${d.shorts_title}\n설명:\n${d.description}`).join('\n\n');
+  if(tl)zip.file('youtube_translations.txt',tl);
+}
+async function downloadSubs(){if(!S.meta)return alert('먼저 대본을 만드세요.');const zip=new JSZip();addSubs(zip);saveAs(await zip.generateAsync({type:'blob'}),`mrcrimemystery_subtitles_${stamp()}.zip`)}
+async function downloadZip(){
+  if(!S.meta)return alert('먼저 대본을 만드세요.');
+  const zip=new JSZip(),m=S.meta;
+  for(const k of['long','short']){
+    const f=zip.folder(k==='long'?'longform':'shorts');
+    S[k].forEach((s,i)=>{const nm='scene_'+pad(i+1);if(s.imgBlob)f.file(`images/${nm}.jpg`,s.imgBlob);if(s.audBlob)f.file(`audio/${nm}.mp3`,s.audBlob)});
+    if(S.track[k])S.track[k].files.forEach((x,n)=>f.file(`audio/narration_${pad(n+1)}_${x.name}`,x));
+    f.file('script.txt',S[k].map((s,i)=>`[${i+1}] (${dur(s).toFixed(1)}초)\n${s.text}\n이미지: ${s.kw}\n연출: ${[s.shot&&SHOTS[s.shot][0],s.lens&&LENSES[s.lens][0],s.motion&&MOTIONS[s.motion]].filter(Boolean).join(' / ')||'자동'}`).join('\n\n'));
+  }
+  addSubs(zip);
+  zip.file('youtube_metadata.txt',`[제목 후보]\n${(m.titles||[]).join('\n')}\n\n[쇼츠 제목]\n${m.shorts?.title||''}\n\n[설명]\n${$('descBox')?.value||m.description}\n\n[태그]\n${(m.tags||[]).join(', ')}\n\n[배경음악 찾기 (오디오 보관함)]\n${$('musicBox')?.value||m.music||''}\n\n[중간 광고 추천 위치]\n${midrolls().join(', ')}\n\n[확인 필요]\n${(m.cautions||[]).map(c=>'- '+c).join('\n')}\n\n[업로드 체크]\n- 쇼츠 '관련 동영상'에 롱폼 지정\n- '변경되거나 합성된 콘텐츠'에 AI 사용 표시\n- 장면마다 대본에 맞춘 카메라 모션 적용, 자막은 장면 앞뒤 1초를 비움`);
+  saveAs(await zip.generateAsync({type:'blob'}),`mrcrimemystery_${stamp()}.zip`);
+}
+
+loadCfg();restore();
+</script>
+</body>
+</html>
