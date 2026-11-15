@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>국내외 전자책 수익 생성기 (Multi-AI E-Book Profit Generator)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+    body { font-family: 'Pretendard', sans-serif; background-color: #0f172a; color: #f8fafc; }
+    .glass-card { background: rgba(30, 41, 59, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(148, 163, 184, 0.15); }
+    .tab-active { background: #2563eb; color: #ffffff; font-weight: 600; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+  <div class="max-w-7xl mx-auto space-y-6">
+    <!-- Header -->
+    <header class="glass-card rounded-2xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div>
+        <span class="text-xs font-bold tracking-wider uppercase text-blue-400">MULTI-AI PUBLISHING & PROFIT ENGINE</span>
+        <h1 class="text-2xl md:text-3xl font-extrabold text-white mt-1">국내외 전자책 수익 생성기 & 프롬프트 빌더</h1>
+        <p class="text-slate-400 text-sm mt-1">Gemini · Claude · ChatGPT API 연동 및 국내외 12개 플랫폼별 순수익·최적화 원고 생성기</p>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="resetAll()" class="px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-sm font-medium transition">초기화</button>
+        <button onclick="downloadResult()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold transition">결과물 (.md) 다운로드</button>
+      </div>
+    </header>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <!-- Left Column: API & Platform Settings (5 cols) -->
+      <div class="lg:col-span-5 space-y-6">
+        <!-- 1. AI Engine & API Key -->
+        <section class="glass-card rounded-2xl p-5 space-y-4">
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-blue-600 text-xs flex items-center justify-center">1</span>
+            AI 엔진 및 API 키 설정
+          </h2>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1.5">AI 모델 선택</label>
+            <div class="grid grid-cols-3 gap-2" id="aiSelector">
+              <button type="button" onclick="selectAI('gemini')" id="btn-gemini" class="tab-active py-2.5 px-3 rounded-xl text-sm border border-slate-700 transition">Gemini API</button>
+              <button type="button" onclick="selectAI('claude')" id="btn-claude" class="py-2.5 px-3 rounded-xl text-sm bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">Claude API</button>
+              <button type="button" onclick="selectAI('chatgpt')" id="btn-chatgpt" class="py-2.5 px-3 rounded-xl text-sm bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition">ChatGPT API</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">세부 모델명</label>
+              <select id="modelVersion" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"></select>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">API Key (선택 입력 · 미입력 시 프롬프트만 생성)</label>
+              <input type="password" id="apiKey" placeholder="sk-... 또는 AIza..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" />
+            </div>
+          </div>
+          <p id="corsNotice" class="text-[11px] text-amber-400/90 hidden">* Claude API는 브라우저 직접 호출(CORS) 제한이 있을 수 있으며, 실패 시 즉시 사용 가능한 프롬프트가 자동 생성됩니다.</p>
+        </section>
+
+        <!-- 2. Target Platform & Revenue Calculator -->
+        <section class="glass-card rounded-2xl p-5 space-y-4">
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-blue-600 text-xs flex items-center justify-center">2</span>
+            판매 플랫폼 선택 및 정산 수익 계산기
+          </h2>
+
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" onclick="setMarketRegion('domestic')" id="region-domestic" class="tab-active py-2 rounded-xl text-xs border border-slate-700">🇰🇷 국내 전자책 플랫폼</button>
+            <button type="button" onclick="setMarketRegion('global')" id="region-global" class="py-2 rounded-xl text-xs bg-slate-800 text-slate-300 border border-slate-700">🌍 해외 전자책 플랫폼</button>
+          </div>
+
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">타겟 플랫폼</label>
+            <select id="platformSelect" onchange="updatePlatformInfo()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"></select>
+          </div>
+
+          <div id="platformDetailBox" class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs space-y-1.5 text-slate-300"></div>
+
+          <!-- Profit Simulator -->
+          <div class="pt-2 border-t border-slate-800 space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs text-slate-400 mb-1" id="priceLabel">판매 단가 (원)</label>
+                <input type="number" id="bookPrice" value="19900" oninput="calculateProfit()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white" />
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1">목표 월 판매량 (부)</label>
+                <input type="number" id="salesVolume" value="50" oninput="calculateProfit()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 bg-gradient-to-r from-blue-950/60 to-indigo-950/60 p-3.5 rounded-xl border border-blue-800/40">
+              <div>
+                <span class="text-[11px] text-slate-400 block">건당 예상 정산액</span>
+                <span id="unitNetProfit" class="text-base font-bold text-emerald-400">0원</span>
+              </div>
+              <div>
+                <span class="text-[11px] text-slate-400 block">월 예상 순수익</span>
+                <span id="monthlyNetProfit" class="text-base font-bold text-blue-400">0원</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. E-book Topic & Structure Input -->
+        <section class="glass-card rounded-2xl p-5 space-y-4">
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-blue-600 text-xs flex items-center justify-center">3</span>
+            전자책 기획 정보 입력
+          </h2>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">전자책 주제 / 핵심 키워드 *</label>
+            <input type="text" id="bookTopic" placeholder="예: 직장인을 위한 n8n 업무 자동화 & 수익화 실전 가이드" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" />
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">타겟 독자층</label>
+              <input type="text" id="targetAudience" placeholder="예: 부업을 찾는 2040 직장인" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white" />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">생성 작업 단계</label>
+              <select id="generationTask" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white">
+                <option value="full_blueprint">1단계: 제목 + 목차 + 판매 상세페이지</option>
+                <option value="chapter_draft">2단계: 본문 챕터 고밀도 초안 작성</option>
+                <option value="global_translate">3단계: 영문 로컬라이징 (KDP/Payhip용)</option>
+              </select>
+            </div>
+          </div>
+          <div class="flex gap-2 pt-2">
+            <button type="button" onclick="buildPromptOnly()" class="flex-1 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 font-semibold text-sm transition">프롬프트만 조립하기</button>
+            <button type="button" onclick="executeAI()" id="runBtn" class="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 font-bold text-sm shadow-lg shadow-blue-600/30 transition">AI 자동 생성 실행 🚀</button>
+          </div>
+        </section>
+      </div>
+
+      <!-- Right Column: Prompt & AI Output (7 cols) -->
+      <div class="lg:col-span-7 space-y-6">
+        <!-- Generated Prompt Box -->
+        <section class="glass-card rounded-2xl p-5 space-y-3">
+          <div class="flex justify-between items-center">
+            <h2 class="text-base font-bold text-white">📋 플랫폼 최적화 시스템 프롬프트 (복사 가능)</h2>
+            <button onclick="copyText('promptOutput')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-blue-400 font-medium transition">프롬프트 복사</button>
+          </div>
+          <textarea id="promptOutput" rows="9" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-xs text-slate-300 font-mono leading-relaxed focus:outline-none" placeholder="좌측에서 주제와 플랫폼을 선택한 뒤 버튼을 누르면 플랫폼 알고리즘과 수수료 구조에 맞춘 전용 프롬프트가 생성됩니다."></textarea>
+        </section>
+
+        <!-- AI Execution Output Box -->
+        <section class="glass-card rounded-2xl p-5 space-y-3">
+          <div class="flex justify-between items-center">
+            <div class="flex items-center gap-2">
+              <h2 class="text-base font-bold text-white">✨ AI 전자책 원고 & 수익화 기획 출력</h2>
+              <span id="statusBadge" class="hidden px-2.5 py-0.5 rounded-full text-[11px] bg-blue-500/20 text-blue-300">생성 중...</span>
+            </div>
+            <button onclick="copyText('aiResultOutput')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-emerald-400 font-medium transition">결과 복사</button>
+          </div>
+          <textarea id="aiResultOutput" rows="16" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-sm text-slate-200 leading-relaxed focus:outline-none" placeholder="API 키를 입력하고 [AI 자동 생성 실행]을 누르면 선택한 AI 모델(Gemini / Claude / ChatGPT)이 즉시 전자책 제목, 상세 목차, 후킹 소개글 또는 본문 원고를 작성합니다."></textarea>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const AI_MODELS = {
+      gemini: [
+        { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (빠른 생성/가성비)' },
+        { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro (고밀도 장문 집필)' }
+      ],
+      claude: [
+        { id: 'claude-3-7-sonnet-20250219', name: 'Claude 3.7 Sonnet (자연스러운 문체)' },
+        { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku (초고속 기획)' }
+      ],
+      chatgpt: [
+        { id: 'gpt-4o', name: 'GPT-4o (균형 잡힌 기획/번역)' },
+        { id: 'gpt-4o-mini', name: 'GPT-4o Mini (대량 초안 생성)' }
+      ]
+    };
+
+    const PLATFORMS = {
+      domestic: [
+        {
+          id: 'kmong',
+          name: '크몽 (Kmong) - 재능마켓',
+          category: '정보성 · 노하우 · PDF 가이드북',
+          feeRate: 0.164,
+          feeText: '수수료: 약 4.4% ~ 16.4% (기본 판매 수수료 기준 시뮬레이션)',
+          format: 'PDF (A4 세로형, 30~80페이지 권장)',
+          strategy: '문제 해결형 제목 + 구매자 후기 유도를 위한 실전 템플릿/체크리스트 부록 필수 포함',
+          currency: 'KRW'
+        },
+        {
+          id: 'taling',
+          name: '탈잉 (Taling) - 재능마켓',
+          category: '실무 노하우 · VOD 연계 전자책',
+          feeRate: 0.20,
+          feeText: '수수료: 약 20% 내외',
+          format: 'PDF 가이드북 + 실습 예제 파일',
+          strategy: '직장인·N잡러 타겟 실무 스킬 중심 구성, 요약본 무료 제공 후 본책 업셀링',
+          currency: 'KRW'
+        },
+        {
+          id: 'littly',
+          name: '리틀리 (Litt.ly) - 링크바이오 즉시 판매',
+          category: 'SNS 팬덤 기반 · 무심사 자동 발송',
+          feeRate: 0.059,
+          feeText: '수수료: 플랫폼 1~5% + PG사 약 2.9% (약 5.9% 적용)',
+          format: 'PDF / 노션(Notion) 템플릿 링크',
+          strategy: '스레드·인스타 릴스 트래픽을 프로필 링크로 바로 유입시켜 심사 없이 즉시 결제·발송',
+          currency: 'KRW'
+        },
+        {
+          id: 'upaper',
+          name: '유페이퍼 (Upaper) - 자가출판/유통',
+          category: '에세이 · 소설 · 전문서적',
+          feeRate: 0.30,
+          feeText: '인세: 기본 40~50% / 직접 판매 시 최대 70% (수수료 30% 기준)',
+          format: 'ePub / PDF (ISBN 무료 발급 가능)',
+          strategy: '교보문고·예스24·알라딘 서점 동시 유통 연동 및 검색 유입용 키워드 최적화',
+          currency: 'KRW'
+        },
+        {
+          id: 'bookk',
+          name: '부크크 (Bookk) - 종이책·전자책 자가출판',
+          category: '에세이 · 전문서적 · POD 종이책 병행',
+          feeRate: 0.30,
+          feeText: '인세: 자체 판매 70% / 외부 서점 유통 40~70%',
+          format: 'ePub / PDF + POD 종이책 동시 출간',
+          strategy: '전자책과 종이책(POD)을 동시에 출간하여 서점 내 신뢰도와 단가 상승 유도',
+          currency: 'KRW'
+        },
+        {
+          id: 'smartstore',
+          name: '네이버 스마트스토어 - 개인 판매 채널',
+          category: '검색 유입 · 블로그/카페 마케팅 연계',
+          feeRate: 0.057,
+          feeText: '수수료: 약 2% ~ 5.7% (업계 최저 수준)',
+          format: 'PDF 이메일/다운로드 링크 발송',
+          strategy: '네이버 블로그 SEO 포스팅과 연동해 광고비 없이 오가닉 검색 구매 전환 극대화',
+          currency: 'KRW'
+        }
+      ],
+      global: [
+        {
+          id: 'kdp',
+          name: '아마존 KDP (Amazon Kindle Direct Publishing)',
+          category: '글로벌 최대 전자책 마켓 (영문/다국어)',
+          feeRate: 0.37,
+          feeText: '인세: $2.99~$12.99 구간 70% 선택 가능 (미국 원천징수 10% 및 전송비 반영 실수령 약 63%)',
+          format: 'ePub / KPF (Kindle Create 변환 권장)',
+          strategy: '영문 로컬라이징 필수, $2.99~$9.99 가격대 설정으로 70% 로열티 티어 확보',
+          currency: 'USD'
+        },
+        {
+          id: 'google_books',
+          name: '구글 플레이 북스 (Google Play Books)',
+          category: '글로벌 안드로이드 & 웹 독자 타겟 (한글/영문 가능)',
+          feeRate: 0.30,
+          feeText: '인세: 주요 국가 판매 시 약 70% 수익 배분',
+          format: 'PDF / ePub (한글 원고 그대로 글로벌 등록 가능)',
+          strategy: '한국어 원고와 영문 번역본을 동시에 등록해 전 세계 구글 검색 노출 선점',
+          currency: 'USD'
+        },
+        {
+          id: 'apple_books',
+          name: '애플 북스 (Apple Books)',
+          category: 'iOS · iPad · Mac 프리미엄 독자층',
+          feeRate: 0.30,
+          feeText: '인세: 모든 가격대 일괄 70% 지급',
+          format: 'ePub (깔끔한 타이포그래피와 인터랙티브 목차 중요)',
+          strategy: '디자인·생산성·자기계발 분야에서 구매력이 높은 애플 생태계 유저 공략',
+          currency: 'USD'
+        },
+        {
+          id: 'payhip',
+          name: '페이힙 (Payhip) - 글로벌 크리에이터 직판',
+          category: '해외 SNS 팬덤 직판 · 즉시 자동 발송',
+          feeRate: 0.05,
+          feeText: '수수료: 무료 플랜 기준 5% (+ PayPal/Stripe 결제 수수료 별도)',
+          format: 'PDF / 디지털 번들 / 노션 템플릿',
+          strategy: '틱톡·인스타·X(트위터) 해외 계정의 바이오 링크에 연결해 달러($) 직접 정산',
+          currency: 'USD'
+        },
+        {
+          id: 'penlip',
+          name: '해외 유통 대행 서비스 (펜립 등 400여 개 스토어)',
+          category: '글로벌 원스톱 멀티 유통 대행',
+          feeRate: 0.14,
+          feeText: '대행 수수료: 약 14% 내외 (각 스토어 정산분에서 차감)',
+          format: 'ePub 표준 포맷',
+          strategy: '아마존·구글·애플·코보 등 400여 개 해외 서점에 한 번에 일괄 등록 및 정산 통합',
+          currency: 'USD'
+        }
+      ]
+    };
+
+    let currentAI = 'gemini';
+    let currentRegion = 'domestic';
+    const EXCHANGE_RATE = 1380; // 1 USD = 1,380 KRW 기준
+
+    function selectAI(ai) {
+      currentAI = ai;
+      ['gemini', 'claude', 'chatgpt'].forEach(key => {
+        const btn = document.getElementById(`btn-${key}`);
+        if (key === ai) {
+          btn.className = 'tab-active py-2.5 px-3 rounded-xl text-sm border border-blue-500 transition';
+        } else {
+          btn.className = 'py-2.5 px-3 rounded-xl text-sm bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition';
+        }
+      });
+
+      const modelSelect = document.getElementById('modelVersion');
+      modelSelect.innerHTML = AI_MODELS[ai].map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+      document.getElementById('corsNotice').classList.toggle('hidden', ai !== 'claude');
+    }
+
+    function setMarketRegion(region) {
+      currentRegion = region;
+      document.getElementById('region-domestic').className = region === 'domestic'
+        ? 'tab-active py-2 rounded-xl text-xs border border-blue-500'
+        : 'py-2 rounded-xl text-xs bg-slate-800 text-slate-300 border border-slate-700';
+      document.getElementById('region-global').className = region === 'global'
+        ? 'tab-active py-2 rounded-xl text-xs border border-blue-500'
+        : 'py-2 rounded-xl text-xs bg-slate-800 text-slate-300 border border-slate-700';
+
+      const platformSelect = document.getElementById('platformSelect');
+      platformSelect.innerHTML = PLATFORMS[region].map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+
+      const priceInput = document.getElementById('bookPrice');
+      if (region === 'domestic') {
+        document.getElementById('priceLabel').innerText = '판매 단가 (원 / KRW)';
+        priceInput.value = 19900;
+        priceInput.step = 1000;
+      } else {
+        document.getElementById('priceLabel').innerText = '판매 단가 (달러 / USD)';
+        priceInput.value = 9.99;
+        priceInput.step = 1;
+      }
+      updatePlatformInfo();
+    }
+
+    function getSelectedPlatform() {
+      const pid = document.getElementById('platformSelect').value;
+      return PLATFORMS[currentRegion].find(p => p.id === pid) || PLATFORMS[currentRegion][0];
+    }
+
+    function updatePlatformInfo() {
+      const p = getSelectedPlatform();
+      document.getElementById('platformDetailBox').innerHTML = `
+        <div class="flex justify-between items-center">
+          <span class="font-bold text-blue-400">${p.category}</span>
+          <span class="px-2 py-0.5 rounded bg-slate-800 text-[11px] text-slate-300">${p.format}</span>
+        </div>
+        <p class="text-slate-300">• ${p.feeText}</p>
+        <p class="text-emerald-400/90">• 핵심 공략: ${p.strategy}</p>
+      `;
+      calculateProfit();
+    }
+
+    function calculateProfit() {
+      const p = getSelectedPlatform();
+      const price = parseFloat(document.getElementById('bookPrice').value) || 0;
+      const vol = parseInt(document.getElementById('salesVolume').value) || 0;
+
+      const netUnit = price * (1 - p.feeRate);
+      const netTotal = netUnit * vol;
+
+      if (p.currency === 'KRW') {
+        document.getElementById('unitNetProfit').innerText = `${Math.round(netUnit).toLocaleString()}원`;
+        document.getElementById('monthlyNetProfit').innerText = `${Math.round(netTotal).toLocaleString()}원`;
+      } else {
+        const krwUnit = Math.round(netUnit * EXCHANGE_RATE);
+        const krwTotal = Math.round(netTotal * EXCHANGE_RATE);
+        document.getElementById('unitNetProfit').innerText = `$${netUnit.toFixed(2)} (약 ${krwUnit.toLocaleString()}원)`;
+        document.getElementById('monthlyNetProfit').innerText = `$${netTotal.toFixed(2)} (약 ${krwTotal.toLocaleString()}원)`;
+      }
+    }
+
+    function buildPromptOnly() {
+      const p = getSelectedPlatform();
+      const topic = document.getElementById('bookTopic').value.trim() || '직장인을 위한 AI 업무 자동화 및 부수입 파이프라인 구축 가이드';
+      const audience = document.getElementById('targetAudience').value.trim() || '실무 효율과 추가 수익을 원하는 2040 직장인 및 1인 창업가';
+      const task = document.getElementById('generationTask').value;
+      const priceStr = p.currency === 'KRW' ? `${document.getElementById('bookPrice').value}원` : `$${document.getElementById('bookPrice').value}`;
+
+      let taskInstruction = '';
+      if (task === 'full_blueprint') {
+        taskInstruction = `1. 클릭과 구매를 부르는 메인 제목 5안 및 부제목 전략
+2. 독자가 지갑을 열 수밖에 없는 6개 파트(Part 1~6) 상세 목차 및 각 장별 핵심 요약
+3. '${p.name}' 상세페이지에 바로 복사해 넣을 수 있는 고전환 세일즈 카피 (후킹 도입부 - 문제 제기 - 해결책 - 목차 소개 - 추천 대상 - FAQ)
+4. 구매 전환율을 높이는 부록(템플릿/체크리스트) 아이디어 3가지`;
+      } else if (task === 'chapter_draft') {
+        taskInstruction = `1. 전체 목차 요약 (Part 1~5)
+2. 가장 핵심이 되는 [Part 1. 실전 핵심 원리 및 세팅 가이드]의 본문 원고를 전자책 출판 수준(공백 포함 3,000자 이상, 단계별 실행 방법·실제 사례·주의사항 포함)으로 구체적이고 깊이 있게 집필하라.`;
+      } else {
+        taskInstruction = `1. 글로벌 독자(미국/영미권)가 선호하는 자연스러운 원어민 비즈니스/실용서 톤앤매너로 번역 및 로컬라이징
+2. Amazon KDP / Payhip 등록용 영문 책 제목(Title), 부제목(Subtitle), 백커버 소개글(Book Description - HTML 태그 포함), 검색 키워드 7개 세트를 작성하라.`;
+      }
+
+      const prompt = `# Role
+너는 누적 판매량 10만 부 이상을 기록한 베스트셀러 전자책 기획자이자, '${p.name}' 플랫폼의 알고리즘과 구매 심리를 완벽히 꿰뚫고 있는 전문 작가다.
+
+# Target Platform & Market Context
+- 판매 플랫폼: ${p.name} (${p.category})
+- 권장 포맷: ${p.format}
+- 책정 판매가: ${priceStr} (${p.feeText})
+- 플랫폼 핵심 공략 포인트: ${p.strategy}
+
+# Book Specification
+- 전자책 핵심 주제: ${topic}
+- 핵심 타겟 독자: ${audience}
+
+# Output Requirements (반드시 아래 항목을 체계적인 마크다운으로 작성할 것)
+${taskInstruction}
+
+# Writing Constraints
+- 뜬구름 잡는 추상적인 조언을 배제하고, 독자가 읽자마자 당장 실행할 수 있는 구체적인 수치, 도구, 단계별 액션 플랜을 제시하라.
+- ${p.currency === 'USD' ? '글로벌 시장 정서에 맞게 현지 사례와 달러($) 기준 예시를 적극 활용하라.' : '한국 독자의 정서와 국내 실무 환경에 딱 맞는 구체적인 사례를 제시하라.'}`;
+
+      document.getElementById('promptOutput').value = prompt;
+      return prompt;
+    }
+
+    async function executeAI() {
+      const prompt = buildPromptOnly();
+      const apiKey = document.getElementById('apiKey').value.trim();
+      const model = document.getElementById('modelVersion').value;
+      const outputBox = document.getElementById('aiResultOutput');
+      const badge = document.getElementById('statusBadge');
+      const runBtn = document.getElementById('runBtn');
+
+      if (!apiKey) {
+        outputBox.value = `[안내] API Key가 입력되지 않아 좌측 상단에 플랫폼 최적화 프롬프트만 생성되었습니다.\n\n• 직접 실행하려면 상단에 ${currentAI.toUpperCase()} API Key를 입력한 뒤 다시 [AI 자동 생성 실행]을 눌러주세요.\n• 또는 생성된 프롬프트를 복사하여 사용 중인 웹 AI 채팅창에 그대로 붙여넣으시면 즉시 동일한 고품질 전자책 원고를 얻을 수 있습니다.`;
+        return;
+      }
+
+      badge.classList.remove('hidden');
+      badge.innerText = `${model} 생성 중...`;
+      runBtn.disabled = true;
+      runBtn.classList.add('opacity-50');
+      outputBox.value = 'AI가 전자책 기획 및 고밀도 원고를 작성하고 있습니다. 잠시만 기다려주세요...';
+
+      try {
+        let resultText = '';
+
+        if (currentAI === 'gemini') {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.75, maxOutputTokens: 4096 }
+            })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error?.message || 'Gemini API 호출 실패');
+          resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || '응답 결과가 비어 있습니다.';
+
+        } else if (currentAI === 'chatgpt') {
+          const res = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+              model: model,
+              messages: [{ role: 'user', content: prompt }],
+              temperature: 0.75
+            })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error?.message || 'ChatGPT API 호출 실패');
+          resultText = data.choices?.[0]?.message?.content || '응답 결과가 비어 있습니다.';
+
+        } else if (currentAI === 'claude') {
+          const res = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': apiKey,
+              'anthropic-version': '2023-06-01',
+              'anthropic-dangerous-direct-browser-access': 'true'
+            },
+            body: JSON.stringify({
+              model: model,
+              max_tokens: 4096,
+              messages: [{ role: 'user', content: prompt }]
+            })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error?.message || 'Claude API 호출 실패');
+          resultText = data.content?.[0]?.text || '응답 결과가 비어 있습니다.';
+        }
+
+        outputBox.value = resultText;
+      } catch (err) {
+        outputBox.value = `[API 호출 오류 발생]\n사유: ${err.message}\n\n해결 방법:\n1. 입력하신 ${currentAI.toUpperCase()} API Key가 유효하고 잔액(크레딧)이 남아있는지 확인하세요.\n2. 로컬 파일(file://) 환경에서 브라우저 보안 정책(CORS)이 차단된 경우, 위 박스에 자동 조립된 [플랫폼 최적화 시스템 프롬프트]를 복사해 사용해 주세요.`;
+      } finally {
+        badge.classList.add('hidden');
+        runBtn.disabled = false;
+        runBtn.classList.remove('opacity-50');
+      }
+    }
+
+    function copyText(elementId) {
+      const el = document.getElementById(elementId);
+      el.select();
+      document.execCommand('copy');
+      alert('클립보드에 복사되었습니다!');
+    }
+
+    function downloadResult() {
+      const prompt = document.getElementById('promptOutput').value;
+      const result = document.getElementById('aiResultOutput').value;
+      if (!prompt && !result) {
+        alert('먼저 프롬프트 또는 원고를 생성해 주세요.');
+        return;
+      }
+      const p = getSelectedPlatform();
+      const content = `# 전자책 수익화 기획 및 원고 (${p.name})\n\n## 1. 생성된 AI 원고\n${result || '(미실행)'}\n\n---\n\n## 2. 사용된 시스템 프롬프트\n${prompt}`;
+      const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `ebook_profit_${p.id}_${new Date().toISOString().slice(0,10)}.md`;
+      a.click();
+    }
+
+    function resetAll() {
+      document.getElementById('bookTopic').value = '';
+      document.getElementById('targetAudience').value = '';
+      document.getElementById('promptOutput').value = '';
+      document.getElementById('aiResultOutput').value = '';
+    }
+
+    // Initialize
+    selectAI('gemini');
+    setMarketRegion('domestic');
+  </script>
+</body>
+</html>
