@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>쇼츠 기획 키트 (틱톡·인스타 릴스)</title>
+<style>
+  :root{--bg:#f6f7f9;--card:#fff;--line:#e3e6ea;--text:#1d2129;--sub:#6b7280;--accent:#2563eb;--ok:#16a34a;--warn:#b45309}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;line-height:1.55}
+  header{padding:20px 16px 8px;max-width:920px;margin:0 auto}
+  h1{font-size:22px;margin:0 0 4px}
+  header p{margin:0;color:var(--sub);font-size:14px}
+  main{max-width:920px;margin:0 auto;padding:8px 16px 60px;display:grid;gap:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .card h2{font-size:16px;margin:0 0 12px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:640px){.grid{grid-template-columns:1fr}}
+  label{display:block;font-size:13px;font-weight:600;margin-bottom:4px}
+  input[type=text],input[type=password],textarea,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff}
+  textarea{min-height:70px;resize:vertical}
+  .full{grid-column:1/-1}
+  .hint{font-size:12px;color:var(--sub);margin-top:3px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .check{display:flex;gap:8px;align-items:flex-start;font-size:14px;font-weight:400;margin:0}
+  .check input{margin-top:4px}
+  button{border:0;border-radius:8px;padding:9px 14px;font:inherit;font-weight:600;cursor:pointer;background:var(--accent);color:#fff}
+  button.ghost{background:#eef1f5;color:var(--text)}
+  button.small{padding:5px 10px;font-size:12px}
+  button:disabled{opacity:.5;cursor:default}
+  .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .thumb{position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .thumb .x{position:absolute;top:2px;right:2px;padding:0 6px;font-size:14px;line-height:20px;background:rgba(0,0,0,.6);border-radius:10px}
+  video.out{width:100%;max-width:360px;border-radius:10px;background:#000;margin-top:10px;display:block}
+  .status{font-size:14px;margin-top:10px;min-height:20px}
+  .err{color:#b91c1c}
+  .block{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;background:#fafbfc}
+  .block .top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+  .block .top b{font-size:14px}
+  pre{white-space:pre-wrap;word-break:break-word;margin:0;font:inherit;font-size:14px}
+  .scene{display:grid;grid-template-columns:70px 1fr;gap:8px;padding:8px 0;border-top:1px dashed var(--line);font-size:14px}
+  .scene:first-child{border-top:0}
+  .scene .t{color:var(--accent);font-weight:700}
+  .scene .v{color:var(--sub);font-size:12px}
+  ul.list{margin:0;padding-left:18px;font-size:14px}
+  .warn{background:#fffbeb;border:1px solid #fde68a;color:var(--warn);border-radius:8px;padding:8px 10px;font-size:13px;margin-bottom:8px}
+  .checklist label{padding:6px 0;border-bottom:1px solid var(--line)}
+  .checklist label:last-child{border-bottom:0}
+  .progress{font-size:13px;color:var(--sub);margin-bottom:6px}
+  details summary{cursor:pointer;font-weight:600;font-size:14px}
+</style>
+</head>
+<body>
+<header>
+  <h1>쇼츠 기획 키트</h1>
+  <p>쿠팡 파트너스 · 틱톡 / 인스타 릴스용 대본·캡션 기획 도구 (스레드 제외). 영상은 만들지 않고 기획과 카피, 업로드 전 점검만 합니다.</p>
+</header>
+<main>
+
+  <section class="card">
+    <h2>0. Gemini API 키</h2>
+    <details>
+      <summary>키 설정 열기 / 닫기</summary>
+      <div class="grid" style="margin-top:10px">
+        <div>
+          <label for="apiKey">API 키</label>
+          <input type="password" id="apiKey" placeholder="AIza..." autocomplete="off">
+          <div class="hint">Google AI Studio에서 무료로 발급합니다. 키는 이 브라우저의 localStorage에만 저장되고, 생성 요청 때 Google 서버로만 전송됩니다.</div>
+        </div>
+        <div>
+          <label for="model">모델</label>
+          <input type="text" id="model" value="gemini-2.5-flash">
+          <div class="hint">오류가 나면 AI Studio에 표시되는 최신 모델명으로 바꾸세요.</div>
+        </div>
+        <div>
+          <label for="ttsModel">음성(TTS) 모델</label>
+          <input type="text" id="ttsModel" value="gemini-2.5-flash-preview-tts">
+          <div class="hint">영상에 AI 음성을 넣을 때만 사용합니다.</div>
+        </div>
+        <div class="full row">
+          <button class="ghost small" id="saveKey">저장</button>
+          <button class="ghost small" id="clearKey">키 삭제</button>
+          <span class="hint" id="keyState"></span>
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <section class="card">
+    <h2>1. 상품 정보</h2>
+    <div class="grid">
+      <div class="full">
+        <label for="product">상품명 *</label>
+        <input type="text" id="product" placeholder="예: 접이식 무선 핸디 청소기">
+      </div>
+      <div class="full">
+        <label for="features">핵심 특징 (쿠팡 상품 페이지에서 확인한 사실만)</label>
+        <textarea id="features" placeholder="예: 무게 600g, 흡입력 8000Pa, 충전 후 30분 사용, 가격 19,900원&#10;확인되지 않은 효능이나 수치는 적지 마세요."></textarea>
+        <div class="hint">여기 적은 내용만 대본의 근거로 쓰도록 AI에 지시합니다. 비워 두면 일반적인 표현만 나옵니다.</div>
+      </div>
+      <div>
+        <label for="link">쿠팡 파트너스 링크</label>
+        <input type="text" id="link" placeholder="https://link.coupang.com/...">
+      </div>
+      <div>
+        <label for="profileLink">프로필 링크 안내 문구</label>
+        <input type="text" id="profileLink" value="👉 구매 링크는 프로필 링크에서 확인하세요">
+      </div>
+      <div>
+        <label for="format">콘텐츠 포맷</label>
+        <select id="format">
+          <option>문제 해결형 (이런 불편 있으셨죠?)</option>
+          <option>꿀템 추천형 (이거 하나면 끝)</option>
+          <option>가성비 비교형 (비싼 것 vs 이것)</option>
+          <option>언박싱 스타일 (연출 컷 기준)</option>
+          <option>ASMR 스타일 (소리 중심)</option>
+        </select>
+      </div>
+      <div>
+        <label for="tone">톤</label>
+        <select id="tone">
+          <option>친근한 반말체</option>
+          <option>담백한 존댓말</option>
+          <option>빠르고 텐션 높은</option>
+          <option>차분한 정보 전달</option>
+        </select>
+      </div>
+      <div>
+        <label for="target">타깃 (선택)</label>
+        <input type="text" id="target" placeholder="예: 자취생, 30대 직장인, 육아맘">
+      </div>
+      <div>
+        <label for="length">영상 길이</label>
+        <select id="length">
+          <option value="12">12초</option>
+          <option value="15" selected>15초</option>
+          <option value="20">20초</option>
+          <option value="30">30초</option>
+        </select>
+      </div>
+      <div class="full">
+        <label class="check"><input type="checkbox" id="used"> 내가 직접 구매해서 사용해 봤다</label>
+        <div class="hint">체크하지 않으면 "내돈내산", "써봤더니", "직접 써본" 같은 실사용 표현을 쓰지 않도록 지시합니다. 사용하지 않은 상품을 써본 것처럼 말하면 소비자 오인 문제가 됩니다.</div>
+      </div>
+      <div class="full">
+        <label class="check"><input type="checkbox" id="linkInCaption"> 캡션에 쿠팡 링크 주소를 직접 넣기</label>
+        <div class="hint">틱톡·인스타 캡션의 링크는 클릭되지 않는 경우가 많아서, 기본은 프로필 링크 안내 문구만 넣습니다.</div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button id="gen">기획 생성하기</button>
+      <button class="ghost" id="resetForm">입력 지우기</button>
+    </div>
+    <div class="status" id="status"></div>
+  </section>
+
+  <section id="result" style="display:none;gap:14px;display:none"></section>
+
+  <section class="card" id="videoCard" style="display:none">
+    <h2>5. 영상 만들기 (슬라이드형, 브라우저에서 바로 제작)</h2>
+    <div class="warn">상품 이미지는 직접 만들었거나 사용 허락을 받은 것만 올리세요. 쿠팡·타인 영상이나 이미지를 무단으로 쓰면 저작권 문제가 생길 수 있습니다.</div>
+    <div class="grid">
+      <div class="full">
+        <label for="imgs">상품 이미지 (여러 장, 장면 순서대로 사용)</label>
+        <input type="file" id="imgs" accept="image/*" multiple>
+        <div class="hint" id="imgCount"></div>
+        <div class="thumbs" id="thumbs"></div>
+      </div>
+      <div class="full">
+        <label for="topTitle">상단 제목 (선택)</label>
+        <input type="text" id="topTitle" placeholder="영상 위쪽에 계속 표시됩니다">
+      </div>
+      <div>
+        <label for="voice">AI 음성</label>
+        <select id="voice">
+          <option value="">음성 없음 (무음)</option>
+          <option value="Kore">Kore (또렷한 여성)</option>
+          <option value="Puck">Puck (밝고 경쾌)</option>
+          <option value="Aoede">Aoede (부드러운)</option>
+          <option value="Charon">Charon (차분한 정보형)</option>
+          <option value="Zephyr">Zephyr (밝은)</option>
+        </select>
+      </div>
+      <div>
+        <label class="check" style="margin-top:24px"><input type="checkbox" id="showAd" checked> 영상에 (광고) 표시와 수수료 안내 자막 넣기</label>
+      </div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button id="makeVideo">영상 만들기</button>
+    </div>
+    <div class="hint">영상이 만들어지는 동안(대본 길이만큼) 이 탭을 닫거나 다른 탭으로 옮기지 마세요. 크롬·엣지에서 가장 잘 됩니다. 저장 형식이 webm이면 틱톡·인스타 업로드가 안 될 수 있어요. 이때는 CapCut 등으로 mp4 변환 후 올리세요.</div>
+    <div class="status" id="vstatus"></div>
+    <div id="vout"></div>
+    <div id="aiPrompt" style="margin-top:14px"></div>
+  </section>
+
+  <section class="card">
+    <h2>업로드 전 체크리스트</h2>
+    <div class="progress" id="progress"></div>
+    <div class="checklist" id="checklist"></div>
+    <div class="row" style="margin-top:10px"><button class="ghost small" id="resetChecks">체크 초기화</button></div>
+  </section>
+
+</main>
+
+<script>
+(function(){
+  "use strict";
+  var DISCLOSURE = "이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.";
+  var $ = function(id){ return document.getElementById(id); };
+  var lastData = null;
+
+  /* ---------- 저장소 ---------- */
+  function lsGet(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
+  function lsSet(k,v){ try { localStorage.setItem(k,v); } catch(e){} }
+  function lsDel(k){ try { localStorage.removeItem(k); } catch(e){} }
+
+  function refreshKeyState(){
+    $("keyState").textContent = lsGet("gk") ? "키가 저장되어 있습니다." : "저장된 키가 없습니다.";
+  }
+  $("apiKey").value = lsGet("gk") || "";
+  $("model").value = lsGet("gm") || "gemini-2.5-flash";
+  $("ttsModel").value = lsGet("gt") || "gemini-2.5-flash-preview-tts";
+  if(!lsGet("gk")){ var kd = document.querySelector("details"); if(kd) kd.open = true; }
+  refreshKeyState();
+  $("saveKey").onclick = function(){
+    var k = $("apiKey").value.trim();
+    if(k){ lsSet("gk",k); }
+    lsSet("gt", $("ttsModel").value.trim() || "gemini-2.5-flash-preview-tts");
+    lsSet("gm", $("model").value.trim() || "gemini-2.5-flash");
+    refreshKeyState();
+  };
+  $("clearKey").onclick = function(){ lsDel("gk"); $("apiKey").value=""; refreshKeyState(); };
+
+  /* ---------- 유틸 ---------- */
+  function el(tag, cls, text){
+    var e = document.createElement(tag);
+    if(cls) e.className = cls;
+    if(text != null) e.textContent = text;
+    return e;
+  }
+  function copyText(text, btn){
+    function done(){ var o = btn.textContent; btn.textContent = "복사됨"; setTimeout(function(){ btn.textContent = o; }, 1200); }
+    if(navigator.clipboard && window.isSecureContext){
+      navigator.clipboard.writeText(text).then(done, fallback);
+    } else { fallback(); }
+    function fallback(){
+      var t = document.createElement("textarea");
+      t.value = text; document.body.appendChild(t); t.select();
+      try { document.execCommand("copy"); done(); } catch(e){}
+      document.body.removeChild(t);
+    }
+  }
+  function block(title, text){
+    var b = el("div","block");
+    var top = el("div","top");
+    top.appendChild(el("b",null,title));
+    var btn = el("button","ghost small","복사");
+    btn.onclick = function(){ copyText(text, btn); };
+    top.appendChild(btn);
+    b.appendChild(top);
+    b.appendChild(el("pre",null,text));
+    return b;
+  }
+  function setStatus(msg, isErr){
+    var s = $("status");
+    s.textContent = msg || "";
+    s.className = "status" + (isErr ? " err" : "");
+  }
+  function hashString(arr){
+    return (arr||[]).map(function(h){
+      h = String(h).trim().replace(/\s+/g,"");
+      if(!h) return "";
+      return h.charAt(0)==="#" ? h : "#"+h;
+    }).filter(Boolean).join(" ");
+  }
+
+  /* ---------- 프롬프트 ---------- */
+  function buildPrompt(v){
+    var rules = [
+      "당신은 한국 쇼핑 숏폼(틱톡·인스타 릴스) 기획자이자 카피라이터다.",
+      "상품: " + v.product,
+      "사용자가 확인한 상품 사실: " + (v.features || "(제공되지 않음 - 일반적이고 검증 가능한 표현만 사용)"),
+      "포맷: " + v.format,
+      "톤: " + v.tone,
+      "타깃: " + (v.target || "일반 소비자"),
+      "영상 길이: " + v.length + "초 (장면은 3~5개, time은 '0-3초' 형식)",
+      "",
+      "반드시 지킬 규칙:",
+      "1. 위에 제공된 상품 사실에 없는 수치, 성분, 효능, 인증, 가격, 할인율을 만들어내지 않는다.",
+      "2. '최저가', '1위', '100%', '무조건', '완치', '의학적 효과' 같은 단정·과장·허위 표현을 쓰지 않는다.",
+      v.used
+        ? "3. 제작자가 직접 사용해 봤으므로 1인칭 사용 경험 표현을 쓸 수 있다. 단, 제공된 사실 범위 안에서만."
+        : "3. 제작자는 이 상품을 직접 사용하지 않았다. '내돈내산', '써봤더니', '직접 써본', '사용 후기'처럼 실사용을 암시하는 표현을 절대 쓰지 않는다. 특징 소개와 추천 관점으로만 쓴다.",
+      "4. 첫 1~2초 후킹 문장을 먼저 만든다.",
+      "5. 장면 설명(visual)은 직접 촬영 없이 만들 수 있는 화면(상품 이미지 연출, 자막 카드, 화면 전환, 이모지 자막) 기준으로 쓴다.",
+      "6. 캡션에는 대가성 문구와 링크를 넣지 않는다. 프로그램이 따로 붙인다.",
+      "",
+      "아래 JSON 형식으로만 답한다. 설명 문장이나 코드블록 없이 JSON만.",
+      '{"hook":"첫 문장","script":[{"time":"0-3초","line":"나레이션/자막","visual":"화면 설명"}],"titles":["제목 10개"],"thumbnails":["썸네일 문구 3개"],"tiktok":{"caption":"틱톡 캡션 본문 (2~3줄)","hashtags":["5개"]},"instagram":{"caption":"인스타 릴스 캡션 본문 (3~4줄)","hashtags":["8개"]},"pinned_comment":"고정 댓글 문구","warnings":["이 대본에서 사실 확인이 필요한 부분"]}'
+    ];
+    return rules.join("\n");
+  }
+
+  /* ---------- Gemini 호출 ---------- */
+  function callGemini(prompt, key, model){
+    var url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent";
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type":"application/json", "x-goog-api-key": key },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: "application/json", temperature: 0.9 }
+      })
+    }).then(function(res){
+      return res.json().then(function(j){
+        if(!res.ok){
+          var msg = (j && j.error && j.error.message) ? j.error.message : ("HTTP " + res.status);
+          if(res.status === 429) msg = "무료 한도에 도달했습니다. 잠시 후 다시 시도하거나 다른 키를 사용하세요. (" + msg + ")";
+          if(res.status === 404) msg = "모델명을 찾을 수 없습니다. 0번 설정에서 모델명을 바꿔 보세요. (" + msg + ")";
+          if(res.status === 400 || res.status === 403) msg = "키 또는 요청이 거부되었습니다. 키를 확인하세요. (" + msg + ")";
+          throw new Error(msg);
+        }
+        var parts = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts;
+        if(!parts || !parts.length) throw new Error("응답이 비어 있습니다. 다시 시도해 주세요.");
+        var text = parts.map(function(p){ return p.text || ""; }).join("");
+        text = text.replace(/^```(?:json)?\s*/i,"").replace(/```\s*$/,"").trim();
+        try { return JSON.parse(text); }
+        catch(e){ throw new Error("AI 응답을 해석하지 못했습니다. 다시 생성해 주세요."); }
+      });
+    });
+  }
+
+  /* ---------- 캡션 조립 ---------- */
+  function buildCaption(base, tags, v){
+    var parts = [String(base||"").trim()];
+    if(v.linkInCaption && v.link){ parts.push("🛒 " + v.link); }
+    else if(v.profileLink){ parts.push(v.profileLink); }
+    parts.push(DISCLOSURE);
+    var tagStr = hashString((tags||[]).concat(["광고"]));
+    if(tagStr) parts.push(tagStr);
+    return parts.filter(Boolean).join("\n\n");
+  }
+
+  /* ---------- 결과 렌더링 ---------- */
+  function render(d, v){
+    var box = $("result");
+    box.innerHTML = "";
+    box.style.display = "grid";
+    box.style.gap = "14px";
+
+    var c1 = el("div","card");
+    c1.appendChild(el("h2",null,"2. 대본"));
+    if(d.warnings && d.warnings.length){
+      var w = el("div","warn");
+      w.appendChild(el("b",null,"사실 확인 필요: "));
+      w.appendChild(document.createTextNode(d.warnings.join(" / ")));
+      c1.appendChild(w);
+    }
+    c1.appendChild(block("후킹 문장", d.hook || ""));
+    var sb = el("div","block");
+    var top = el("div","top");
+    top.appendChild(el("b",null,"장면별 대본"));
+    var allText = (d.script||[]).map(function(s){ return "["+s.time+"] "+s.line; }).join("\n");
+    var cb = el("button","ghost small","대본 복사");
+    cb.onclick = function(){ copyText(allText, cb); };
+    var ttsBtn = el("button","ghost small","소리 내어 읽기");
+    ttsBtn.onclick = function(){
+      if(!("speechSynthesis" in window)){ alert("이 브라우저는 읽기 기능을 지원하지 않습니다."); return; }
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance((d.script||[]).map(function(s){ return s.line; }).join(" "));
+      u.lang = "ko-KR"; window.speechSynthesis.speak(u);
+    };
+    var r = el("div","row"); r.appendChild(ttsBtn); r.appendChild(cb);
+    top.appendChild(r);
+    sb.appendChild(top);
+    (d.script||[]).forEach(function(s){
+      var row = el("div","scene");
+      row.appendChild(el("div","t",s.time||""));
+      var c = el("div");
+      c.appendChild(el("div",null,s.line||""));
+      c.appendChild(el("div","v","화면: " + (s.visual||"")));
+      row.appendChild(c);
+      sb.appendChild(row);
+    });
+    c1.appendChild(sb);
+    box.appendChild(c1);
+
+    var c2 = el("div","card");
+    c2.appendChild(el("h2",null,"3. 제목 · 썸네일"));
+    var tb = el("div","block");
+    var tt = el("div","top"); tt.appendChild(el("b",null,"제목 후보"));
+    var tcb = el("button","ghost small","전체 복사");
+    tcb.onclick = function(){ copyText((d.titles||[]).join("\n"), tcb); };
+    tt.appendChild(tcb); tb.appendChild(tt);
+    var ul = el("ul","list");
+    (d.titles||[]).forEach(function(t){ ul.appendChild(el("li",null,t)); });
+    tb.appendChild(ul);
+    c2.appendChild(tb);
+    var thb = el("div","block");
+    var tht = el("div","top"); thb.appendChild(tht); tht.appendChild(el("b",null,"썸네일 문구"));
+    var ul2 = el("ul","list");
+    (d.thumbnails||[]).forEach(function(t){ ul2.appendChild(el("li",null,t)); });
+    thb.appendChild(ul2);
+    c2.appendChild(thb);
+    box.appendChild(c2);
+
+    var c3 = el("div","card");
+    c3.appendChild(el("h2",null,"4. 플랫폼별 캡션 (대가성 문구 자동 포함)"));
+    c3.appendChild(block("틱톡 캡션", buildCaption(d.tiktok && d.tiktok.caption, d.tiktok && d.tiktok.hashtags, v)));
+    c3.appendChild(block("인스타 릴스 캡션", buildCaption(d.instagram && d.instagram.caption, d.instagram && d.instagram.hashtags, v)));
+    c3.appendChild(block("고정 댓글", [d.pinned_comment||"", v.profileLink, DISCLOSURE].filter(Boolean).join("\n")));
+    c3.appendChild(el("div","hint","영상 화면에도 '광고' 또는 '쿠팡 파트너스 활동으로 수수료를 받을 수 있음' 자막을 넣는 것을 권장합니다. 아래 체크리스트를 확인하세요."));
+    box.appendChild(c3);
+
+    $("videoCard").style.display = "block";
+    $("topTitle").value = (d.thumbnails && d.thumbnails[0]) || d.hook || "";
+    var ap = $("aiPrompt"); ap.innerHTML = "";
+    var scenes = (d.script||[]).map(function(s){ return "["+(s.time||"")+"] "+(s.line||"")+" / 화면: "+(s.visual||""); }).join("\n");
+    var req = "아래 기획으로 세로(9:16) 쇼핑 쇼츠 영상을 AI 영상 도구로 만들어줘.\n상품: "+v.product+"\n포맷: "+v.format+"\n길이: "+v.length+"초\n톤: "+v.tone+"\n"+
+      (v.used ? "" : "주의: 직접 사용하지 않은 상품이므로 실사용 후기처럼 보이면 안 됨.\n")+
+      "화면에 (광고) 표시와 쿠팡 파트너스 수수료 안내 자막 포함.\n\n장면:\n"+scenes;
+    ap.appendChild(block("AI 영상용 요청문 (Claude 채팅에 붙여넣으면 AI 영상 도구로 제작 요청)", req));
+
+    box.scrollIntoView({behavior:"smooth", block:"start"});
+  }
+
+  /* ---------- 생성 ---------- */
+  function readForm(){
+    return {
+      product: $("product").value.trim(),
+      features: $("features").value.trim(),
+      link: $("link").value.trim(),
+      profileLink: $("profileLink").value.trim(),
+      format: $("format").value,
+      tone: $("tone").value,
+      target: $("target").value.trim(),
+      length: $("length").value,
+      used: $("used").checked,
+      linkInCaption: $("linkInCaption").checked
+    };
+  }
+  $("gen").onclick = function(){
+    var v = readForm();
+    var key = $("apiKey").value.trim() || lsGet("gk") || "";
+    var model = $("model").value.trim() || "gemini-2.5-flash";
+    if(!v.product){ setStatus("상품명을 입력하세요.", true); return; }
+    if(!key){ setStatus("0번에서 Gemini API 키를 먼저 저장하세요.", true); return; }
+    if(v.linkInCaption && !v.link){ setStatus("캡션에 링크를 넣으려면 쿠팡 파트너스 링크를 입력하세요.", true); return; }
+    lsSet("gk", key); lsSet("gm", model); refreshKeyState();
+    $("gen").disabled = true;
+    setStatus("생성 중입니다. 10~30초 걸릴 수 있어요...");
+    callGemini(buildPrompt(v), key, model).then(function(d){
+      lastData = d;
+      render(d, v);
+      setStatus("완료되었습니다.");
+    }).catch(function(e){
+      setStatus("오류: " + e.message, true);
+    }).then(function(){ $("gen").disabled = false; });
+  };
+  $("resetForm").onclick = function(){
+    ["product","features","link","target"].forEach(function(id){ $(id).value=""; });
+    $("used").checked = false; $("linkInCaption").checked = false;
+    $("result").innerHTML = ""; $("result").style.display = "none";
+    setStatus("");
+  };
+
+  /* ---------- 영상 만들기 ---------- */
+  var imgs = [];
+  var W = 1080, H = 1920;
+  var making = false;
+
+  function setV(msg, isErr){
+    var s = $("vstatus"); s.textContent = msg || ""; s.className = "status" + (isErr ? " err" : "");
+  }
+  function renderThumbs(){
+    var w = $("thumbs"); w.innerHTML = "";
+    imgs.forEach(function(it, i){
+      var d = el("div","thumb");
+      var im = document.createElement("img"); im.src = it.url; im.alt = it.name;
+      var x = el("button","x","×");
+      x.onclick = function(){ URL.revokeObjectURL(it.url); imgs.splice(i,1); renderThumbs(); };
+      d.appendChild(im); d.appendChild(x); w.appendChild(d);
+    });
+    $("imgCount").textContent = imgs.length ? (imgs.length + "장 선택됨") : "이미지가 없으면 색 배경 카드로 만들어집니다.";
+  }
+  $("imgs").onchange = function(){
+    var input = this;
+    Array.prototype.forEach.call(input.files, function(f){
+      if(/^image\//.test(f.type)) imgs.push({ url: URL.createObjectURL(f), name: f.name });
+    });
+    input.value = "";
+    renderThumbs();
+  };
+  renderThumbs();
+
+  function loadImage(url){
+    return new Promise(function(resolve, reject){
+      var im = new Image();
+      im.onload = function(){ resolve(im); };
+      im.onerror = function(){ reject(new Error("이미지를 불러오지 못했습니다.")); };
+      im.src = url;
+    });
+  }
+
+  function geminiTTS(text, key, model, voice){
+    var url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent";
+    return fetch(url, {
+      method: "POST",
+      headers: { "Content-Type":"application/json", "x-goog-api-key": key },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: "Read the following in natural, upbeat Korean like a shopping short-form narrator:\n" + text }] }],
+        generationConfig: {
+          responseModalities: ["AUDIO"],
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } }
+        }
+      })
+    }).then(function(res){
+      return res.json().then(function(j){
+        if(!res.ok){
+          var msg = (j && j.error && j.error.message) ? j.error.message : ("HTTP " + res.status);
+          if(res.status === 404) msg = "음성 모델명을 찾을 수 없습니다. 0번 설정의 음성 모델명을 확인하세요. (" + msg + ")";
+          if(res.status === 429) msg = "음성 생성 한도에 도달했습니다. 잠시 후 다시 시도하세요. (" + msg + ")";
+          throw new Error(msg);
+        }
+        var parts = (j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || [];
+        var p = null;
+        for(var i = 0; i < parts.length; i++){ if(parts[i].inlineData){ p = parts[i].inlineData; break; } }
+        if(!p) throw new Error("음성 데이터가 응답에 없습니다.");
+        return p;
+      });
+    });
+  }
+  function pcmToBuffer(ac, inline){
+    var rm = /rate=(\d+)/.exec(inline.mimeType || "");
+    var rate = rm ? parseInt(rm[1], 10) : 24000;
+    var bin = atob(inline.data);
+    var n = Math.floor(bin.length / 2);
+    var buf = ac.createBuffer(1, n, rate);
+    var ch = buf.getChannelData(0);
+    for(var i = 0; i < n; i++){
+      var lo = bin.charCodeAt(i*2), hi = bin.charCodeAt(i*2+1);
+      var v = (hi << 8) | lo;
+      if(v >= 32768) v -= 65536;
+      ch[i] = v / 32768;
+    }
+    return buf;
+  }
+
+  function buildTimeline(script, lengthSec, audioDur){
+    var n = script.length;
+    var starts = [], ok = true, maxEnd = 0, i;
+    for(i = 0; i < n; i++){
+      var m = /(\d+(?:\.\d+)?)\s*[-~–]\s*(\d+(?:\.\d+)?)/.exec(script[i].time || "");
+      if(!m){ ok = false; break; }
+      starts.push(parseFloat(m[1]));
+      maxEnd = Math.max(maxEnd, parseFloat(m[2]));
+    }
+    if(ok && n){ starts[0] = 0; for(i = 1; i < n; i++){ if(starts[i] <= starts[i-1]) { ok = false; break; } } }
+    var base = ok && maxEnd > 0 ? maxEnd : lengthSec;
+    if(!ok){ starts = []; for(i = 0; i < n; i++) starts.push(base * i / n); }
+    var total = audioDur ? audioDur + 0.7 : base;
+    var k = total / base;
+    var b = starts.map(function(s){ return s * k; });
+    b.push(total);
+    return { bounds: b, total: total };
+  }
+
+  function wrapLines(ctx, text, maxW){
+    var lines = [], cur = "";
+    for(var i = 0; i < text.length; i++){
+      var ch = text.charAt(i);
+      if(ch === "\n"){ lines.push(cur); cur = ""; continue; }
+      var test = cur + ch;
+      if(ctx.measureText(test).width > maxW && cur){
+        var sp = cur.lastIndexOf(" ");
+        if(sp > cur.length * 0.5 && ch !== " "){ lines.push(cur.slice(0, sp)); cur = cur.slice(sp + 1) + ch; }
+        else { lines.push(cur); cur = ch === " " ? "" : ch; }
+      } else { cur = test; }
+    }
+    if(cur) lines.push(cur);
+    return lines;
+  }
+  function strokeFill(ctx, text, x, y, fill, strokeW){
+    ctx.lineJoin = "round"; ctx.lineWidth = strokeW; ctx.strokeStyle = "#000";
+    ctx.strokeText(text, x, y); ctx.fillStyle = fill; ctx.fillText(text, x, y);
+  }
+
+  var PALETTES = [["#1e3a8a","#7c3aed"],["#be123c","#f97316"],["#047857","#0ea5e9"],["#4338ca","#db2777"]];
+  var FONT = '"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif';
+
+  function paintScene(ctx, imgList, idx, p, line, alpha){
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    if(imgList.length){
+      var im = imgList[idx % imgList.length];
+      var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
+      var sc = Math.max(W/iw, H/ih);
+      try { ctx.filter = "blur(24px)"; } catch(e){}
+      ctx.drawImage(im, (W - iw*sc)/2, (H - ih*sc)/2, iw*sc, ih*sc);
+      ctx.filter = "none";
+      ctx.fillStyle = "rgba(0,0,0,.45)"; ctx.fillRect(0,0,W,H);
+      var zoom = (idx % 2 === 0) ? (1.0 + 0.10*p) : (1.10 - 0.10*p);
+      var fs = Math.min(W*0.94/iw, H*0.44/ih) * zoom;
+      var fw = iw*fs, fh = ih*fs;
+      ctx.drawImage(im, (W - fw)/2, H*0.45 - fh/2, fw, fh);
+    } else {
+      var pal = PALETTES[idx % PALETTES.length];
+      var g = ctx.createLinearGradient(0,0,W,H);
+      g.addColorStop(0, pal[0]); g.addColorStop(1, pal[1]);
+      ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+    }
+    var gr = ctx.createLinearGradient(0, H*0.62, 0, H);
+    gr.addColorStop(0, "rgba(0,0,0,0)"); gr.addColorStop(1, "rgba(0,0,0,.65)");
+    ctx.fillStyle = gr; ctx.fillRect(0, H*0.62, W, H*0.38);
+    if(line){
+      ctx.font = "bold 62px " + FONT;
+      ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+      var lines = wrapLines(ctx, line, 900).slice(0, 5);
+      var y = H*0.74;
+      lines.forEach(function(t, i){ strokeFill(ctx, t, W/2, y + i*82, "#fff", 12); });
+    }
+    ctx.restore();
+  }
+  function paintOverlay(ctx, title, showAd){
+    ctx.save();
+    ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    if(title){
+      ctx.font = "bold 74px " + FONT;
+      var tl = wrapLines(ctx, title, 940).slice(0, 2);
+      tl.forEach(function(t, i){ strokeFill(ctx, t, W/2, 250 + i*96, "#ffe14d", 14); });
+    }
+    if(showAd){
+      ctx.fillStyle = "rgba(0,0,0,.65)";
+      ctx.fillRect(48, 70, 150, 64);
+      ctx.fillStyle = "#fff"; ctx.font = "bold 40px " + FONT; ctx.textAlign = "center";
+      ctx.fillText("광고", 123, 115);
+      ctx.font = "bold 34px " + FONT;
+      strokeFill(ctx, "쿠팡 파트너스 활동으로 수수료를 받을 수 있습니다", W/2, 1850, "#fff", 8);
+    }
+    ctx.restore();
+  }
+
+  function pickMime(){
+    var c = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2","video/mp4","video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm"];
+    for(var i = 0; i < c.length; i++){ if(window.MediaRecorder && MediaRecorder.isTypeSupported(c[i])) return c[i]; }
+    return "";
+  }
+
+  $("makeVideo").onclick = function(){
+    if(making) return;
+    if(!lastData || !lastData.script || !lastData.script.length){ setV("먼저 위에서 기획을 생성하세요.", true); return; }
+    if(!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream){ setV("이 브라우저는 영상 만들기를 지원하지 않습니다. 최신 크롬이나 엣지를 쓰세요.", true); return; }
+    var v = readForm();
+    var key = $("apiKey").value.trim() || lsGet("gk") || "";
+    var voice = $("voice").value;
+    var ttsModel = $("ttsModel").value.trim() || "gemini-2.5-flash-preview-tts";
+    if(voice && !key){ setV("음성을 쓰려면 0번에서 API 키를 저장하세요.", true); return; }
+    var title = $("topTitle").value.trim();
+    var showAd = $("showAd").checked;
+    var script = lastData.script;
+    making = true; $("makeVideo").disabled = true; $("vout").innerHTML = "";
+    var ac = null, recorder = null;
+
+    function fail(e){
+      setV("오류: " + (e && e.message ? e.message : e), true);
+      making = false; $("makeVideo").disabled = false;
+      try { if(ac) ac.close(); } catch(x){}
+    }
+
+    setV("이미지 준비 중...");
+    Promise.all(imgs.map(function(it){ return loadImage(it.url); })).then(function(imgList){
+      ac = new (window.AudioContext || window.webkitAudioContext)();
+      var audioP = Promise.resolve(null);
+      if(voice){
+        setV("AI 음성 만드는 중...");
+        var text = script.map(function(s){ return s.line; }).join(" ");
+        audioP = geminiTTS(text, key, ttsModel, voice).then(function(inl){ return pcmToBuffer(ac, inl); });
+      }
+      return audioP.then(function(abuf){
+        var tl = buildTimeline(script, parseInt(v.length, 10) || 15, abuf ? abuf.duration : 0);
+        var canvas = document.createElement("canvas");
+        canvas.width = W; canvas.height = H;
+        var ctx = canvas.getContext("2d");
+        var stream = canvas.captureStream(30);
+        var srcNode = null;
+        if(abuf){
+          var dest = ac.createMediaStreamDestination();
+          srcNode = ac.createBufferSource(); srcNode.buffer = abuf; srcNode.connect(dest);
+          dest.stream.getAudioTracks().forEach(function(t){ stream.addTrack(t); });
+        }
+        var mime = pickMime();
+        var opts = { videoBitsPerSecond: 6000000 };
+        if(mime) opts.mimeType = mime;
+        recorder = new MediaRecorder(stream, opts);
+        var chunks = [];
+        recorder.ondataavailable = function(e){ if(e.data && e.data.size) chunks.push(e.data); };
+        recorder.onstop = function(){
+          var type = recorder.mimeType || mime || "video/webm";
+          var ext = /mp4/.test(type) ? "mp4" : "webm";
+          var blob = new Blob(chunks, { type: type });
+          var url = URL.createObjectURL(blob);
+          var out = $("vout"); out.innerHTML = "";
+          var vid = document.createElement("video");
+          vid.className = "out"; vid.controls = true; vid.src = url; vid.playsInline = true;
+          out.appendChild(vid);
+          var a = document.createElement("a");
+          a.href = url; a.download = "shorts-" + Date.now() + "." + ext;
+          a.textContent = "영상 다운로드 (." + ext + ")";
+          a.style.cssText = "display:inline-block;margin-top:10px;font-weight:600";
+          out.appendChild(a);
+          if(ext === "webm") out.appendChild(el("div","hint","webm 파일입니다. 틱톡·인스타 업로드가 안 되면 CapCut 등으로 mp4로 변환하세요."));
+          setV("완료되었습니다. 길이 " + tl.total.toFixed(1) + "초");
+          making = false; $("makeVideo").disabled = false;
+          try { ac.close(); } catch(x){}
+        };
+
+        function sceneAt(t){
+          var b = tl.bounds, i = 0;
+          for(var k = 0; k < b.length - 1; k++){ if(t >= b[k]) i = k; }
+          return i;
+        }
+        function paint(t){
+          var i = sceneAt(t), b = tl.bounds;
+          var p = Math.min(1, Math.max(0, (t - b[i]) / Math.max(0.01, b[i+1] - b[i])));
+          var fade = 0.3, into = t - b[i];
+          if(i > 0 && into < fade){
+            paintScene(ctx, imgList, i-1, 1, script[i-1].line, 1);
+            paintScene(ctx, imgList, i, p, script[i].line, into / fade);
+          } else {
+            paintScene(ctx, imgList, i, p, script[i].line, 1);
+          }
+          paintOverlay(ctx, title, showAd);
+        }
+
+        paint(0);
+        return ac.resume().then(function(){
+          recorder.start(250);
+          if(srcNode) srcNode.start();
+          var t0 = performance.now();
+          function frame(){
+            var t = (performance.now() - t0) / 1000;
+            if(t >= tl.total){
+              paint(Math.max(0, tl.total - 0.01));
+              setV("마무리 중...");
+              setTimeout(function(){ if(recorder.state !== "inactive") recorder.stop(); }, 400);
+              return;
+            }
+            paint(t);
+            setV("영상 만드는 중... " + Math.min(99, Math.round(t / tl.total * 100)) + "%");
+            requestAnimationFrame(frame);
+          }
+          requestAnimationFrame(frame);
+        });
+      });
+    }).catch(fail);
+  };
+
+  /* ---------- 체크리스트 ---------- */
+  var ITEMS = [
+    "영상 화면에 '광고' 또는 쿠팡 파트너스 수수료 안내 자막이 있다",
+    "캡션 안에 대가성 문구가 들어 있다",
+    "상품명, 가격, 사양이 쿠팡 상품 페이지와 일치한다",
+    "'최저가', '1위', '100% 효과' 같은 단정·과장 표현이 없다",
+    "직접 쓰지 않았다면 '내돈내산', '써봤더니' 같은 표현이 없다",
+    "영상·이미지·음악이 직접 만들었거나 사용 허락을 받은 것이다 (타인 영상 무단 사용 아님)",
+    "프로필 링크가 쿠팡 파트너스 링크(또는 링크 모음 페이지)로 연결되어 있다",
+    "링크를 눌러 실제 상품 페이지로 이동하는지 직접 확인했다",
+    "업로드 대상에 스레드는 제외하고 틱톡·인스타 릴스만 선택했다",
+    "최종 게시 버튼은 내가 직접 눌렀다"
+  ];
+  function loadChecks(){ try { return JSON.parse(lsGet("checks")||"{}"); } catch(e){ return {}; } }
+  function renderChecks(){
+    var state = loadChecks();
+    var wrap = $("checklist"); wrap.innerHTML = "";
+    var done = 0;
+    ITEMS.forEach(function(text, i){
+      var lab = el("label","check");
+      var cb = document.createElement("input");
+      cb.type = "checkbox"; cb.checked = !!state[i];
+      if(cb.checked) done++;
+      cb.onchange = function(){
+        var s = loadChecks(); s[i] = cb.checked; lsSet("checks", JSON.stringify(s)); updateProgress();
+      };
+      lab.appendChild(cb); lab.appendChild(el("span",null,text));
+      wrap.appendChild(lab);
+    });
+    $("progress").textContent = done + " / " + ITEMS.length + " 완료";
+  }
+  function updateProgress(){
+    var s = loadChecks(), n = 0;
+    ITEMS.forEach(function(_, i){ if(s[i]) n++; });
+    $("progress").textContent = n + " / " + ITEMS.length + " 완료" + (n === ITEMS.length ? " ✅ 업로드 준비 끝" : "");
+  }
+  $("resetChecks").onclick = function(){ lsDel("checks"); renderChecks(); };
+  renderChecks();
+})();
+</script>
+</body>
+</html>
